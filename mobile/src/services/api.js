@@ -2,7 +2,7 @@ import axios from "axios";
 import { supabase } from "./supabase";
 
 // 后端 API 地址，部署后替换为公网 URL
-const API_BASE_URL = "https://whattoeat-production-9bea.up.railway.app/api"; // Railway 云端地址
+const API_BASE_URL = "https://eat.13129988.xyz/api";
 // const API_BASE_URL = 'http://localhost:8080/api'; // iOS 模拟器使用此地址
 // const API_BASE_URL = 'https://your-deployed-url.com/api'; // 生产环境
 
