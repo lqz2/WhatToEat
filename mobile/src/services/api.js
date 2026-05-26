@@ -2,7 +2,7 @@ import axios from "axios";
 import { supabase } from "./supabase";
 
 // 后端 API 地址，部署后替换为公网 URL
-const API_BASE_URL = "http://10.125.17.154:8080/api"; // 手机热点连接时使用电脑 IP
+const API_BASE_URL = "https://whattoeat-production-9bea.up.railway.app/api"; // Railway 云端地址
 // const API_BASE_URL = 'http://localhost:8080/api'; // iOS 模拟器使用此地址
 // const API_BASE_URL = 'https://your-deployed-url.com/api'; // 生产环境
 
@@ -70,7 +70,7 @@ export const recommendAPI = {
   getRecommendations: () => api.get("/recommend"),
   getPreferences: () => api.get("/preferences"),
   createPreference: (cuisine, weight = 1) => api.post("/preferences", { cuisine, weight }),
-  deletePreference: (cuisine) => api.delete(`/preferences?cuisine=${cuisine}`),
+  deletePreference: (cuisine) => api.delete(`/preferences/${encodeURIComponent(cuisine)}`),
 };
 
 // ========== 共享 API ==========

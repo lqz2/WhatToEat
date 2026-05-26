@@ -143,7 +143,7 @@ func CreatePreference(c *gin.Context) {
 func DeletePreference(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 
-	cuisine := c.Query("cuisine")
+	cuisine := c.Param("cuisine")
 	if cuisine == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "请指定要删除的菜系"})
 		return

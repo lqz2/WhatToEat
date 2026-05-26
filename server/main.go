@@ -60,7 +60,7 @@ func main() {
 			protected.GET("/recommend", handlers.GetRecommendations)
 			protected.GET("/preferences", handlers.GetPreferences)
 			protected.POST("/preferences", handlers.CreatePreference)
-			protected.DELETE("/preferences", handlers.DeletePreference)
+			protected.DELETE("/preferences/:cuisine", handlers.DeletePreference)
 
 			// 共享功能
 			protected.POST("/share", handlers.ShareMenu)
