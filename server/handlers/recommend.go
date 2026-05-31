@@ -18,7 +18,12 @@ import (
 
 // Gemini API 请求结构
 type GeminiRequest struct {
-	Contents []GeminiContent `json:"contents"`
+	Contents         []GeminiContent         `json:"contents"`
+	GenerationConfig *GeminiGenerationConfig `json:"generationConfig,omitempty"`
+}
+
+type GeminiGenerationConfig struct {
+	ResponseMimeType string `json:"responseMimeType,omitempty"`
 }
 
 type GeminiContent struct {
@@ -83,6 +88,9 @@ func GetRecommendations(c *gin.Context) {
 					{Text: prompt},
 				},
 			},
+		},
+		GenerationConfig: &GeminiGenerationConfig{
+			ResponseMimeType: "application/json",
 		},
 	}
 
