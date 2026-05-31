@@ -26,6 +26,17 @@ jobs:
           cd server
           GOOS=linux GOARCH=amd64 go build -o whattoeat-server main.go
 
+- name: Prepare VPS for new binary
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            # 使用 rm -f 删除旧文件（Unlink），不会报错 Text file busy
+            rm -f /var/www/whattoeat/whattoeat-server
+
       - name: Copy binary to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -47,4 +58,5 @@ jobs:
           port: 22
           script: |
             chmod +x /var/www/whattoeat/whattoeat-server
+            # 重启只需几百毫秒，对业务几乎无感
             sudo systemctl restart whattoeat
