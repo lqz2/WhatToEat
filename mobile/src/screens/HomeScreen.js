@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { recommendAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -19,13 +20,40 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const fetchRecommendations = async () => {
+  const CACHE_KEY = "CACHED_RECOMMENDATIONS";
+  const CACHE_TIME_KEY = "CACHED_RECOMMENDATIONS_TIME";
+  const SIX_HOURS = 6 * 60 * 60 * 1000; // 6 小时的毫秒数
+
+  const fetchRecommendations = async (forceRefresh = false) => {
     setLoading(true);
     try {
+      // 如果不是强制刷新，先检查缓存
+      if (!forceRefresh) {
+        const cachedTimeStr = await AsyncStorage.getItem(CACHE_TIME_KEY);
+        if (cachedTimeStr) {
+          const cachedTime = parseInt(cachedTimeStr, 10);
+          const now = Date.now();
+
+          // 如果更新时间距今未超过 6 小时，直接使用缓存
+          if (now - cachedTime < SIX_HOURS) {
+            const cachedDataStr = await AsyncStorage.getItem(CACHE_KEY);
+            if (cachedDataStr) {
+              setRecommendData(JSON.parse(cachedDataStr));
+              setLoading(false);
+              setRefreshing(false);
+              return; // 结束函数，不再调用后端 API
+            }
+          }
+        }
+      }
+
       const response = await recommendAPI.getRecommendations();
       // 获取到新的结构 { type: "list", data: [...] } 或 { type: "text", data: "..." }
       if (response.data) {
         setRecommendData(response.data);
+        // 保存到缓存和记录当前时间
+        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(response.data));
+        await AsyncStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
       }
     } catch (error) {
       console.log("获取推荐失败:", error.message);
@@ -38,13 +66,13 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchRecommendations();
+      fetchRecommendations(false); // 切换页面时，不强制刷新，优先走缓存
     }, []),
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchRecommendations();
+    fetchRecommendations(true); // 用户手动点击"换一批"或下拉刷新时，强制请求 LLM
   };
 
   if (loading) {
