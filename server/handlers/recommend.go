@@ -118,6 +118,7 @@ func GetRecommendations(c *gin.Context) {
 		cleanContent := strings.TrimSpace(content)
 		cleanContent = strings.TrimPrefix(cleanContent, "```json")
 		cleanContent = strings.TrimSuffix(cleanContent, "```")
+		cleanContent = strings.TrimSpace(cleanContent)
 		err = json.Unmarshal([]byte(cleanContent), &recommendations)
 	}
 

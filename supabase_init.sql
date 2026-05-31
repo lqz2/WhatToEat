@@ -1,16 +1,12 @@
 -- WhatToEat 数据库初始化脚本
 -- 在 Supabase SQL Editor 中执行此脚本
 
--- 菜品表（关联用户）
-CREATE TABLE dishes (
+-- 冰箱食材表
+CREATE TABLE fridge_items (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
-  cuisine VARCHAR(50) NOT NULL,
-  description TEXT,
-  tags TEXT[],
-  image_url TEXT,
-  is_favorite BOOLEAN DEFAULT FALSE,
+  quantity VARCHAR(50), -- 例如 "2个" 或 "500g"
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -34,28 +30,28 @@ CREATE TABLE shared_menus (
 );
 
 -- 启用 RLS (Row Level Security)
-ALTER TABLE dishes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fridge_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared_menus ENABLE ROW LEVEL SECURITY;
 
--- dishes 表 RLS 策略：用户可以访问自己的菜品和被共享给自己的菜品
-CREATE POLICY "Users can view own dishes" ON dishes
+-- fridge_items 表 RLS 策略：用户可以访问自己的食材和被共享给自己的冰箱食材
+CREATE POLICY "Users can view own fridge items" ON fridge_items
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view shared dishes" ON dishes
+CREATE POLICY "Users can view shared fridge items" ON fridge_items
   FOR SELECT USING (
     user_id IN (
       SELECT owner_id FROM shared_menus WHERE shared_with_id = auth.uid()
     )
   );
 
-CREATE POLICY "Users can insert own dishes" ON dishes
+CREATE POLICY "Users can insert own fridge items" ON fridge_items
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own dishes" ON dishes
+CREATE POLICY "Users can update own fridge items" ON fridge_items
   FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can delete own dishes" ON dishes
+CREATE POLICY "Users can delete own fridge items" ON fridge_items
   FOR DELETE USING (auth.uid() = user_id);
 
 -- user_preferences 表 RLS 策略
@@ -82,8 +78,7 @@ CREATE POLICY "Users can delete own shares" ON shared_menus
   FOR DELETE USING (auth.uid() = owner_id);
 
 -- 创建索引提升查询性能
-CREATE INDEX idx_dishes_user_id ON dishes(user_id);
-CREATE INDEX idx_dishes_cuisine ON dishes(cuisine);
+CREATE INDEX idx_fridge_items_user_id ON fridge_items(user_id);
 CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
 CREATE INDEX idx_shared_menus_owner_id ON shared_menus(owner_id);
 CREATE INDEX idx_shared_menus_shared_with_id ON shared_menus(shared_with_id);
