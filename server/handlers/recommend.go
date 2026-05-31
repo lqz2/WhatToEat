@@ -58,8 +58,8 @@ func GetRecommendations(c *gin.Context) {
 		tastes = append(tastes, p.Cuisine)
 	}
 
-	prompt := fmt.Sprintf("我的冰箱里有这些食材：%s。我平时喜欢吃：%s。请结合这些信息，为我推荐 3 道菜，并给出菜名、推荐理由（结合我的食材）以及非常简短的做法提示。请直接返回中文，不要带 Markdown 格式符号。", 
-		strings.Join(ingredients, "、"), 
+	prompt := fmt.Sprintf("我的冰箱里有这些食材：%s。我平时喜欢吃：%s。请结合这些信息，为我推荐 3 道菜，并给出菜名、推荐理由（结合我的食材）以及非常简短的做法提示。请直接返回中文，不要带 Markdown 格式符号。",
+		strings.Join(ingredients, "、"),
 		strings.Join(tastes, "、"))
 
 	// 4. 调用 OpenRouter
@@ -96,7 +96,7 @@ func GetRecommendations(c *gin.Context) {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	
+
 	// 解析响应
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
@@ -111,7 +111,7 @@ func GetRecommendations(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回结果"})
 		return
 	}
-	
+
 	firstChoice := choices[0].(map[string]interface{})
 	message := firstChoice["message"].(map[string]interface{})
 	content := message["content"].(string)
@@ -164,28 +164,4 @@ func DeletePreference(c *gin.Context) {
 
 	db.Where("user_id = ? AND cuisine = ?", userID, cuisine).Delete(&models.UserPreference{})
 	c.JSON(http.StatusOK, gin.H{"message": "已删除偏好"})
-}
-
-
-	c.JSON(http.StatusCreated, pref)
-}
-
-// DeletePreference 删除菜系偏好
-func DeletePreference(c *gin.Context) {
-	userID := middleware.GetUserID(c)
-
-	cuisine := c.Param("cuisine")
-	if cuisine == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请指定要删除的菜系"})
-		return
-	}
-
-	db := database.GetDB()
-	result := db.Where("user_id = ? AND cuisine = ?", userID, cuisine).Delete(&models.UserPreference{})
-	if result.RowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "偏好不存在"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "删除成功"})
 }
