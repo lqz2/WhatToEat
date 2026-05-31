@@ -69,8 +69,13 @@ func GetRecommendations(c *gin.Context) {
 		return
 	}
 
+	modelName := os.Getenv("LLM_MODEL")
+	if modelName == "" {
+		modelName = "openrouter/free" // 默认模型
+	}
+
 	reqBody := OpenRouterRequest{
-		Model: "google/gemini-flash-1.5-exp:free", // OpenRouter 上的免费模型
+		Model: modelName,
 		Messages: []Message{
 			{Role: "user", Content: prompt},
 		},
