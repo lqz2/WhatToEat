@@ -5,8 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
 import HomeScreen from "../screens/HomeScreen";
-import DishListScreen from "../screens/DishListScreen";
-import AddDishScreen from "../screens/AddDishScreen";
+import FridgeScreen from "../screens/FridgeScreen";
 import PreferenceScreen from "../screens/PreferenceScreen";
 import ShareScreen from "../screens/ShareScreen";
 import LoginScreen from "../screens/LoginScreen";
@@ -48,11 +47,11 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="DishList"
-        component={DishListScreen}
+        name="Fridge"
+        component={FridgeScreen}
         options={{
-          tabBarLabel: "菜单",
-          tabBarIcon: ({ focused }) => <TabIcon icon="📋" focused={focused} />,
+          tabBarLabel: "冰箱",
+          tabBarIcon: ({ focused }) => <TabIcon icon="❄️" focused={focused} />,
         }}
       />
       <Tab.Screen

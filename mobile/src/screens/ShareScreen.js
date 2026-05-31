@@ -43,9 +43,11 @@ export default function ShareScreen() {
     }
 
     setAdding(true);
+    // 自动补全后缀，保持与注册/登录逻辑一致
+    const fullEmail = email.includes("@") ? email.trim() : `${email.trim()}@whattoeat.com`;
     try {
-      await shareAPI.shareMenu(email.trim());
-      Alert.alert("成功", `已共享菜单给 ${email}`);
+      await shareAPI.shareMenu(fullEmail);
+      Alert.alert("成功", `已共享菜单给 ${fullEmail}`);
       setEmail("");
       fetchSharedList();
     } catch (error) {

@@ -56,13 +56,11 @@ export const authAPI = {
   login: (email, password) => api.post("/auth/login", { email, password }),
 };
 
-// ========== 菜品 API ==========
-export const dishAPI = {
-  getDishes: () => api.get("/dishes"),
-  createDish: (data) => api.post("/dishes", data),
-  updateDish: (id, data) => api.put(`/dishes/${id}`, data),
-  deleteDish: (id) => api.delete(`/dishes/${id}`),
-  toggleFavorite: (id) => api.put(`/dishes/${id}/favorite`),
+// ========== 冰箱食材 API ==========
+export const fridgeAPI = {
+  getFridgeItems: () => api.get("/fridge"),
+  addFridgeItem: (name, quantity = "") => api.post("/fridge", { name, quantity }),
+  deleteFridgeItem: (id) => api.delete(`/fridge/${id}`),
 };
 
 // ========== 推荐与偏好 API ==========

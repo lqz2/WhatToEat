@@ -8,21 +8,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function LoginScreen({ navigation }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("错误", "请填写邮箱和密码");
+    if (!username || !password) {
+      Alert.alert("错误", "请填写账号和密码");
       return;
     }
     setLoading(true);
+    // 自动补全后缀，使之符合 Supabase 的 Email 格式要求
+    const email = username.includes("@") ? username : `${username}@whattoeat.com`;
     try {
       await signIn(email, password);
     } catch (error) {
@@ -42,13 +45,12 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View className="mb-4">
-          <Text className="text-sm font-medium text-gray-700 mb-2">邮箱</Text>
+          <Text className="text-sm font-medium text-gray-700 mb-2">账号</Text>
           <TextInput
             className="border border-gray-300 rounded-xl px-4 py-3 text-base bg-gray-50"
-            placeholder="请输入邮箱"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            placeholder="请输入账号"
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
           />
         </View>
@@ -69,7 +71,11 @@ export default function LoginScreen({ navigation }) {
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text className="text-white text-lg font-semibold">{loading ? "登录中..." : "登录"}</Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white text-lg font-semibold">登录</Text>
+          )}
         </TouchableOpacity>
 
         <View className="flex-row justify-center mt-6">

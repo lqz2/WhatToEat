@@ -2,25 +2,19 @@ package models
 
 import (
 	"time"
-
-	"github.com/lib/pq"
 )
 
-// Dish 菜品模型
-type Dish struct {
-	ID          uint           `json:"id" gorm:"primaryKey"`
-	UserID      string         `json:"user_id" gorm:"type:uuid;not null"`
-	Name        string         `json:"name" gorm:"size:100;not null"`
-	Cuisine     string         `json:"cuisine" gorm:"size:50;not null"`
-	Description string         `json:"description" gorm:"type:text"`
-	Tags        pq.StringArray `json:"tags" gorm:"type:text[]"`
-	ImageURL    string         `json:"image_url" gorm:"type:text"`
-	IsFavorite  bool           `json:"is_favorite" gorm:"default:false"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"autoCreateTime"`
+// FridgeItem 冰箱食材模型
+type FridgeItem struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UserID    string    `json:"user_id" gorm:"type:uuid;not null"`
+	Name      string    `json:"name" gorm:"size:100;not null"`
+	Quantity  string    `json:"quantity" gorm:"size:50"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
-func (Dish) TableName() string {
-	return "dishes"
+func (FridgeItem) TableName() string {
+	return "fridge_items"
 }
 
 // UserPreference 用户菜系偏好模型

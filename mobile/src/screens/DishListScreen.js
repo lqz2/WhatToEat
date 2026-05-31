@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, Alert, RefreshControl } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, Alert, RefreshControl, Platform } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { dishAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
@@ -27,21 +27,29 @@ export default function DishListScreen({ navigation }) {
   );
 
   const handleDelete = (id, name) => {
-    Alert.alert("确认删除", `确定要删除"${name}"吗？`, [
-      { text: "取消", style: "cancel" },
-      {
-        text: "删除",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await dishAPI.deleteDish(id);
-            fetchDishes();
-          } catch (error) {
-            Alert.alert("错误", "删除失败");
-          }
+    const performDelete = async () => {
+      try {
+        await dishAPI.deleteDish(id);
+        fetchDishes();
+      } catch (error) {
+        Alert.alert("错误", "删除失败 123");
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (window.confirm(`确定要删除"${name}"吗？`)) {
+        performDelete();
+      }
+    } else {
+      Alert.alert("确认删除", `确定要删除"${name}"吗？`, [
+        { text: "取消", style: "cancel" },
+        {
+          text: "删除",
+          style: "destructive",
+          onPress: performDelete,
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   const handleToggleFavorite = async (id) => {

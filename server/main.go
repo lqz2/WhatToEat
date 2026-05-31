@@ -49,12 +49,10 @@ func main() {
 		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware())
 		{
-			// 菜品管理
-			protected.GET("/dishes", handlers.GetDishes)
-			protected.POST("/dishes", handlers.CreateDish)
-			protected.PUT("/dishes/:id", handlers.UpdateDish)
-			protected.DELETE("/dishes/:id", handlers.DeleteDish)
-			protected.PUT("/dishes/:id/favorite", handlers.ToggleFavorite)
+			// 冰箱食材管理
+			protected.GET("/fridge", handlers.GetFridgeItems)
+			protected.POST("/fridge", handlers.AddFridgeItem)
+			protected.DELETE("/fridge/:id", handlers.DeleteFridgeItem)
 
 			// 推荐与偏好
 			protected.GET("/recommend", handlers.GetRecommendations)

@@ -1,8 +1,13 @@
 package handlers
 
 import (
-	"math/rand"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"strings"
 
 	"whattoeat/database"
 	"whattoeat/middleware"
@@ -11,78 +16,104 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetRecommendations 根据偏好推荐菜品
+// OpenRouterRequest OpenRouter 请求结构
+type OpenRouterRequest struct {
+	Model    string    `json:"model"`
+	Messages []Message `json:"messages"`
+}
+
+type Message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// GetRecommendations 调用 OpenRouter 推荐菜品
 func GetRecommendations(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	db := database.GetDB()
 
-	// 获取用户偏好
-	var preferences []models.UserPreference
-	db.Where("user_id = ?", userID).Find(&preferences)
+	// 1. 获取冰箱食材
+	var items []models.FridgeItem
+	db.Where("user_id = ? OR user_id IN (SELECT owner_id FROM shared_menus WHERE shared_with_id = ?)", userID, userID).Find(&items)
 
-	// 如果没有偏好设置，随机返回用户自己的菜品
-	if len(preferences) == 0 {
-		dishes := make([]models.Dish, 0)
-		db.Where("user_id = ?", userID).
-			Order("RANDOM()").
-			Limit(10).
-			Find(&dishes)
-		c.JSON(http.StatusOK, dishes)
+	if len(items) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"recommendations": "你的冰箱空空如也，先去添加一些食材吧！",
+		})
 		return
 	}
 
-	// 根据偏好权重加权随机选取菜品
-	allRecommended := make([]models.Dish, 0)
-	seen := make(map[uint]bool)
+	// 2. 获取用户偏好
+	var prefs []models.UserPreference
+	db.Where("user_id = ?", userID).Find(&prefs)
 
-	for _, pref := range preferences {
-		var dishes []models.Dish
-		// 根据权重决定每个菜系推荐的菜品数量
-		count := pref.Weight * 2
-		if count < 1 {
-			count = 1
-		}
-
-		db.Where("user_id = ? AND cuisine = ?", userID, pref.Cuisine).
-			Order("RANDOM()").
-			Limit(count).
-			Find(&dishes)
-
-		for _, dish := range dishes {
-			if !seen[dish.ID] {
-				seen[dish.ID] = true
-				allRecommended = append(allRecommended, dish)
-			}
-		}
+	// 3. 构建 Prompt
+	var ingredients []string
+	for _, item := range items {
+		ingredients = append(ingredients, item.Name)
 	}
 
-	// 如果推荐菜品不足，补充随机菜品
-	if len(allRecommended) < 10 {
-		var extraDishes []models.Dish
-		db.Where("user_id = ?", userID).
-			Order("RANDOM()").
-			Limit(10 - len(allRecommended)).
-			Find(&extraDishes)
-
-		for _, dish := range extraDishes {
-			if !seen[dish.ID] {
-				seen[dish.ID] = true
-				allRecommended = append(allRecommended, dish)
-			}
-		}
+	var tastes []string
+	for _, p := range prefs {
+		tastes = append(tastes, p.Cuisine)
 	}
 
-	// 打乱推荐结果顺序
-	rand.Shuffle(len(allRecommended), func(i, j int) {
-		allRecommended[i], allRecommended[j] = allRecommended[j], allRecommended[i]
+	prompt := fmt.Sprintf("我的冰箱里有这些食材：%s。我平时喜欢吃：%s。请结合这些信息，为我推荐 3 道菜，并给出菜名、推荐理由（结合我的食材）以及非常简短的做法提示。请直接返回中文，不要带 Markdown 格式符号。", 
+		strings.Join(ingredients, "、"), 
+		strings.Join(tastes, "、"))
+
+	// 4. 调用 OpenRouter
+	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	if apiKey == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 LLM API Key (OPENROUTER_API_KEY)"})
+		return
+	}
+
+	reqBody := OpenRouterRequest{
+		Model: "google/gemini-flash-1.5-exp:free", // OpenRouter 上的免费模型
+		Messages: []Message{
+			{Role: "user", Content: prompt},
+		},
+	}
+
+	jsonData, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "json")
+	req.Header.Set("HTTP-Referer", "https://whattoeat.com")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "连接 LLM 失败"})
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	
+	// 解析响应
+	var result map[string]interface{}
+	json.Unmarshal(body, &result)
+
+	if errData, ok := result["error"]; ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 报错", "details": errData})
+		return
+	}
+
+	choices := result["choices"].([]interface{})
+	if len(choices) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回结果"})
+		return
+	}
+	
+	firstChoice := choices[0].(map[string]interface{})
+	message := firstChoice["message"].(map[string]interface{})
+	content := message["content"].(string)
+
+	c.JSON(http.StatusOK, gin.H{
+		"recommendations": content,
 	})
-
-	// 最多返回 10 条
-	if len(allRecommended) > 10 {
-		allRecommended = allRecommended[:10]
-	}
-
-	c.JSON(http.StatusOK, allRecommended)
 }
 
 // GetPreferences 获取用户偏好
@@ -98,6 +129,37 @@ func GetPreferences(c *gin.Context) {
 
 // CreatePreference 设置菜系偏好
 func CreatePreference(c *gin.Context) {
+	var pref models.UserPreference
+	if err := c.ShouldBindJSON(&pref); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	pref.UserID = userID
+
+	db := database.GetDB()
+	// 如果已存在则更新，不存在则创建
+	var existing models.UserPreference
+	if err := db.Where("user_id = ? AND cuisine = ?", userID, pref.Cuisine).First(&existing).Error; err == nil {
+		existing.Weight = pref.Weight
+		db.Save(&existing)
+	} else {
+		db.Create(&pref)
+	}
+
+	c.JSON(http.StatusOK, pref)
+}
+
+// DeletePreference 删除偏好
+func DeletePreference(c *gin.Context) {
+	cuisine := c.Param("cuisine")
+	userID := middleware.GetUserID(c)
+	db := database.GetDB()
+
+	db.Where("user_id = ? AND cuisine = ?", userID, cuisine).Delete(&models.UserPreference{})
+	c.JSON(http.StatusOK, gin.H{"message": "已删除偏好"})
+}
 	userID := middleware.GetUserID(c)
 
 	var req models.CreatePreferenceRequest

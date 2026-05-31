@@ -1,19 +1,24 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, SafeAreaView, ActivityIndicator, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { recommendAPI } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function HomeScreen() {
+  const { signOut } = useAuth();
   const [recommendations, setRecommendations] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchRecommendations = async () => {
+    setLoading(true);
     try {
       const response = await recommendAPI.getRecommendations();
-      setRecommendations(response.data || []);
+      // 后端返回的是 { "recommendations": "文字建议..." }
+      setRecommendations(response.data.recommendations || "");
     } catch (error) {
       console.log("获取推荐失败:", error.message);
+      setRecommendations("获取推荐失败，请检查网络或配置。");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -31,64 +36,46 @@ export default function HomeScreen() {
     fetchRecommendations();
   };
 
-  const renderDishCard = ({ item }) => (
-    <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100">
-      <View className="flex-row justify-between items-start">
-        <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="text-lg font-bold text-gray-800">{item.name}</Text>
-            {item.is_favorite && <Text className="ml-2 text-lg">❤️</Text>}
-          </View>
-          <View className="flex-row items-center mt-1">
-            <View className="bg-primary/10 px-2 py-0.5 rounded-full mr-2">
-              <Text className="text-primary text-xs font-medium">{item.cuisine}</Text>
-            </View>
-            {item.tags?.map((tag, index) => (
-              <View key={index} className="bg-gray-100 px-2 py-0.5 rounded-full mr-1">
-                <Text className="text-gray-600 text-xs">{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-      {item.description ? (
-        <Text className="text-gray-500 text-sm mt-2" numberOfLines={2}>
-          {item.description}
-        </Text>
-      ) : null}
-    </View>
-  );
-
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 justify-center items-center">
-        <Text className="text-gray-500">加载中...</Text>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text className="text-gray-500 mt-2">智能大模型正在分析你的冰箱...</Text>
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-gray-50">
-      <View className="bg-white pt-12 pb-4 px-5 border-b border-gray-100">
-        <Text className="text-2xl font-bold text-dark">今天吃什么</Text>
-        <Text className="text-gray-500 mt-1">根据你的口味推荐</Text>
+      <View className="bg-white pt-12 pb-4 px-5 border-b border-gray-100 flex-row justify-between items-center">
+        <View>
+          <Text className="text-2xl font-bold text-dark">今日 AI 推荐</Text>
+          <Text className="text-gray-500 mt-1">基于你冰箱里的食材</Text>
+        </View>
+        <TouchableOpacity onPress={signOut} className="bg-gray-100 p-2 rounded-full">
+          <Text className="text-base">退出</Text>
+        </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={recommendations}
-        renderItem={renderDishCard}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerClassName="p-4"
+      <ScrollView
+        contentContainerStyle={{ padding: 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />}
-        ListEmptyComponent={
-          <View className="flex-1 justify-center items-center py-20">
-            <Text className="text-4xl mb-3">🍜</Text>
-            <Text className="text-gray-500 text-center">
-              {recommendations.length === 0 ? '还没有菜品\n去"我的菜单"添加菜品吧！' : "暂无推荐"}
-            </Text>
-          </View>
-        }
-      />
+      >
+        <View className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+          <Text className="text-4xl mb-4">👨‍🍳</Text>
+          <Text className="text-lg leading-7 text-gray-800">
+            {recommendations || "你的冰箱里好像还没有东西，快去添加吧！"}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={onRefresh}
+          className="bg-primary mt-6 py-4 rounded-2xl items-center shadow-md"
+        >
+          <Text className="text-white text-lg font-bold">换一批推荐</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
+}
 }

@@ -2,15 +2,16 @@
 
 ## 技术栈总览
 
-| 层级    | 技术                      | 说明                                       |
-| ------- | ------------------------- | ------------------------------------------ |
-| 前端    | React Native + Expo       | 跨平台移动端，Expo 简化开发和打包          |
-| 导航    | React Navigation          | App 页面路由导航                           |
-| UI 样式 | NativeWind (Tailwind CSS) | 基于 Tailwind CSS 的 React Native 样式方案 |
-| 认证    | Supabase Auth             | 邮箱注册登录，免费内置于 Supabase          |
-| 后端    | Go + Gin                  | 高性能轻量 Web 框架                        |
-| 数据库  | Supabase (PostgreSQL)     | 免费云端数据库，500MB 免费存储             |
-| ORM     | GORM + PostgreSQL 驱动    | Go 主流 ORM，简化数据库操作                |
+| 层级    | 技术                      | 说明                                                     |
+| ------- | ------------------------- | -------------------------------------------------------- |
+| 前端    | React Native + Expo       | 跨平台移动端，Expo 简化开发和打包                        |
+| 导航    | React Navigation          | App 页面路由导航                                         |
+| UI 样式 | NativeWind (Tailwind CSS) | 基于 Tailwind CSS 的 React Native 样式方案               |
+| 认证    | Supabase Auth             | 模拟账号模式 (username@whattoeat.com)                    |
+| 后端    | Go + Gin                  | 高性能轻量 Web 框架                                      |
+| 数据库  | Supabase (PostgreSQL)     | 免费云端数据库                                           |
+| LLM API | OpenRouter (Free API)     | 聚合平台，调用免费的 LLM 模型 (如 Gemini/Llama/DeepSeek) |
+| ORM     | GORM + PostgreSQL 驱动    | Go 主流 ORM，简化数据库操作                              |
 
 ## 项目结构
 
@@ -41,24 +42,20 @@ WhatToEat/
 
 - 在 [supabase.com](https://supabase.com) 注册并创建免费项目
 - 获取项目 URL、Anon Key、Service Role Key 和数据库连接字符串
-- 开启 Supabase Auth（邮箱注册登录）
+- 开启 Supabase Auth（本项目已改为模拟账号模式：username + @whattoeat.com）
 - 在 SQL Editor 中创建以下表结构：
 
 ```sql
--- 菜品表（关联用户）
-CREATE TABLE dishes (
+-- 冰箱食材表（管理现有的食材）
+CREATE TABLE fridge_items (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
-  cuisine VARCHAR(50) NOT NULL,
-  description TEXT,
-  tags TEXT[],
-  image_url TEXT,
-  is_favorite BOOLEAN DEFAULT FALSE,
+  quantity VARCHAR(50),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- 用户菜系偏好表
+-- 用户菜系偏好表（用于微调 LLM 推荐口味）
 CREATE TABLE user_preferences (
   id SERIAL PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -68,7 +65,7 @@ CREATE TABLE user_preferences (
   UNIQUE(user_id, cuisine)
 );
 
--- 菜单共享表
+-- 冰箱共享表（全家共用一个冰箱）
 CREATE TABLE shared_menus (
   id SERIAL PRIMARY KEY,
   owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -83,64 +80,65 @@ CREATE TABLE shared_menus (
 ## Task 2: 搭建 Go 后端 (server/)
 
 1. 初始化 Go 模块：`go mod init whattoeat`
-2. 安装依赖：Gin、GORM、PostgreSQL 驱动、CORS 中间件、JWT 库
-3. 创建数据模型 (`models/`)：`Dish`、`UserPreference`、`SharedMenu`
+2. 安装依赖：Gin、GORM、PostgreSQL 驱动、HTTP 客户端（调用 OpenRouter）
+3. 创建数据模型 (`models/`)：`FridgeItem`、`UserPreference`、`SharedMenu`
 4. 创建数据库连接 (`database/db.go`)：连接 Supabase PostgreSQL
-5. 创建 JWT 认证中间件 (`middleware/auth.go`)：验证 Supabase 签发的 JWT Token，从 Token 中提取 `user_id`
+5. 创建 JWT 认证中间件 (`middleware/auth.go`)：验证 Supabase 签发的 JWT Token
 6. 实现 API 路由：
 
 **认证相关（无需 Token）：**
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| POST | /api/auth/register | 注册（调用 Supabase Auth） |
-| POST | /api/auth/login | 登录（调用 Supabase Auth） |
+| POST | /api/auth/register | 注册（模拟账号） |
+| POST | /api/auth/login | 登录（模拟账号） |
 
-**菜品管理（需 Token）：**
+**冰箱食材管理（需 Token）：**
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| GET | /api/dishes | 获取我的菜品 + 被共享的菜品 |
-| POST | /api/dishes | 添加菜品 |
-| PUT | /api/dishes/:id | 修改菜品 |
-| DELETE | /api/dishes/:id | 删除菜品 |
-| PUT | /api/dishes/:id/favorite | 收藏/取消收藏 |
+| GET | /api/fridge | 获取我及被共享的冰箱食材 |
+| POST | /api/fridge | 添加食材 |
+| DELETE | /api/fridge/:id | 删除/消耗食材 |
 
 **推荐与偏好（需 Token）：**
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| GET | /api/recommend | 根据偏好推荐菜品 |
+| GET | /api/recommend | 调用 OpenRouter API，根据冰箱食材推荐菜谱 |
 | GET | /api/preferences | 获取用户偏好 |
 | POST | /api/preferences | 设置菜系偏好 |
 
 **共享功能（需 Token）：**
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| POST | /api/share | 共享菜单给指定用户（通过邮箱） |
+| POST | /api/share | 共享冰箱给指定用户（通过账号名） |
 | DELETE | /api/share/:id | 取消共享 |
 | GET | /api/shared | 查看我的共享列表 |
 
-7. 推荐逻辑：根据当前用户的 `user_preferences` 菜系权重，从自己的菜品中加权随机推荐
+7. LLM 推荐逻辑：
+   - 从数据库获取用户的 `fridge_items` 列表。
+   - 获取用户的 `user_preferences`。
+   - 构造 Prompt：“我有这些食材：[食材列表]，我喜欢[偏好]口味，请推荐3道菜并给出简易做法。”
+   - 通过 **OpenRouter** 调用免费模型（如 `google/gemini-pro-1.5-exp-free-v1:free` 或 `meta-llama/llama-3.1-8b-instruct:free`）。
+   - 解析流式或普通返回的 JSON 结果。
 
 ## Task 3: 搭建 React Native 前端 (mobile/)
 
 1. 使用 `npx create-expo-app` 初始化项目
 2. 安装依赖：React Navigation、NativeWind v4、`@supabase/supabase-js`、axios
 3. 配置 NativeWind：
-   - 安装 `nativewind`、`tailwindcss`，生成 `tailwind.config.js`
-   - 在 `babel.config.js` 中添加 NativeWind Babel 插件
-   - 创建 `global.css` 引入 Tailwind 指令，在 `App.js` 中导入
+   - 适配 Web 和移动端，配置 `global.css`。
 4. 配置 Supabase 客户端 (`services/supabase.js`)：用于前端认证
-5. 实现 AuthContext (`contexts/AuthContext.js`)：管理登录状态，自动刷新 Token
+5. 实现 AuthContext (`contexts/AuthContext.js`)：支持账号名自动补全后缀。
 6. 实现页面：
    - **LoginScreen / RegisterScreen** - 登录注册页
-   - **HomeScreen** - 首页，推荐菜品卡片列表
-   - **DishListScreen** - 我的菜品列表（区分自己的和被共享的）
-   - **AddDishScreen** - 添加/编辑菜品表单
-   - **PreferenceScreen** - 设置喜欢的菜系偏好
-   - **ShareScreen** - 管理共享（添加/取消共享用户）
+   - **HomeScreen** - 首页，点击“生成推荐”按钮后展现 LLM 推荐的菜谱及做法。
+   - **FridgeScreen** - 我的冰箱，列表展示食材。
+   - **AddFridgeItemScreen** - 添加食材页面。
+   - **PreferenceScreen** - 设置喜欢的菜系偏好。
+   - **ShareScreen** - 管理共享。
 7. 导航结构：
    - 未登录：LoginScreen / RegisterScreen
-   - 已登录：底部 Tab 导航（首页 / 菜单 / 偏好 / 共享）
-8. 封装 API 调用层 (`services/api.js`)：axios 拦截器自动附加 JWT Token
+   - 已登录：底部 Tab 导航（首页 / 冰箱 / 偏好 / 共享）
+8. 封装 API 调用层 (`services/api.js`)：axios 拦截器增加 ActivityIndicator 加载反馈。
 
 ## Task 4: 联调与测试
 

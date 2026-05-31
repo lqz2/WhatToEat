@@ -8,18 +8,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function RegisterScreen({ navigation }) {
   const { signUp } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!username || !password || !confirmPassword) {
       Alert.alert("错误", "请填写所有字段");
       return;
     }
@@ -33,9 +34,11 @@ export default function RegisterScreen({ navigation }) {
     }
 
     setLoading(true);
+    // 自动补全后缀
+    const email = username.includes("@") ? username : `${username}@whattoeat.com`;
     try {
       await signUp(email, password);
-      Alert.alert("注册成功", "请查收邮箱验证邮件，然后登录");
+      Alert.alert("注册成功", "请登录");
       navigation.navigate("Login");
     } catch (error) {
       Alert.alert("注册失败", error.message);
@@ -54,13 +57,12 @@ export default function RegisterScreen({ navigation }) {
         </View>
 
         <View className="mb-4">
-          <Text className="text-sm font-medium text-gray-700 mb-2">邮箱</Text>
+          <Text className="text-sm font-medium text-gray-700 mb-2">账号</Text>
           <TextInput
             className="border border-gray-300 rounded-xl px-4 py-3 text-base bg-gray-50"
-            placeholder="请输入邮箱"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
+            placeholder="请输入账号"
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
           />
         </View>
@@ -92,7 +94,11 @@ export default function RegisterScreen({ navigation }) {
           onPress={handleRegister}
           disabled={loading}
         >
-          <Text className="text-white text-lg font-semibold">{loading ? "注册中..." : "注册"}</Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white text-lg font-semibold">注册</Text>
+          )}
         </TouchableOpacity>
 
         <View className="flex-row justify-center mt-6">
