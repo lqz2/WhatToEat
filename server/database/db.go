@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"whattoeat/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -27,7 +28,17 @@ func Init() {
 		log.Fatalf("数据库连接失败: %v", err)
 	}
 
-	fmt.Println("数据库连接成功")
+	// 自动迁移
+	err = DB.AutoMigrate(
+		&models.FridgeItem{},
+		&models.UserPreference{},
+		&models.SharedMenu{},
+	)
+	if err != nil {
+		log.Fatalf("数据库迁移失败: %v", err)
+	}
+
+	fmt.Println("数据库连接并发起自动迁移成功")
 }
 
 // GetDB 获取数据库实例

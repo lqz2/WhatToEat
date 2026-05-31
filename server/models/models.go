@@ -42,24 +42,6 @@ func (SharedMenu) TableName() string {
 	return "shared_menus"
 }
 
-// CreateDishRequest 创建菜品请求
-type CreateDishRequest struct {
-	Name        string   `json:"name" binding:"required"`
-	Cuisine     string   `json:"cuisine" binding:"required"`
-	Description string   `json:"description"`
-	Tags        []string `json:"tags"`
-	ImageURL    string   `json:"image_url"`
-}
-
-// UpdateDishRequest 更新菜品请求
-type UpdateDishRequest struct {
-	Name        string   `json:"name"`
-	Cuisine     string   `json:"cuisine"`
-	Description string   `json:"description"`
-	Tags        []string `json:"tags"`
-	ImageURL    string   `json:"image_url"`
-}
-
 // CreatePreferenceRequest 创建偏好请求
 type CreatePreferenceRequest struct {
 	Cuisine string `json:"cuisine" binding:"required"`
