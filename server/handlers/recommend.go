@@ -191,3 +191,5 @@ func DeletePreference(c *gin.Context) {
 	db.Where("user_id = ? AND cuisine = ?", userID, cuisine).Delete(&models.UserPreference{})
 	c.JSON(http.StatusOK, gin.H{"message": "已删除偏好"})
 }
+
+// Trigger redeploy
