@@ -73,7 +73,7 @@ function ProfileStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Share" component={ShareScreen} options={{ title: "菜单共享" }} />
+      <Stack.Screen name="Share" component={ShareScreen} options={{ title: "冰箱共享" }} />
       <Stack.Screen name="Preferences" component={PreferenceScreen} options={{ title: "口味偏好" }} />
     </Stack.Navigator>
   );

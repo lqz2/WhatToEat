@@ -7,8 +7,8 @@ export default function ProfileScreen({ navigation }) {
 
   const menuItems = [
     {
-      title: "菜单共享",
-      subtitle: "管理与他人的共享菜单",
+      title: "冰箱共享",
+      subtitle: "与家人共同管理食材",
       icon: "🤝",
       onPress: () => navigation.navigate("Share"),
     },
