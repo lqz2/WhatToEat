@@ -160,43 +160,7 @@ func DeletePreference(c *gin.Context) {
 	db.Where("user_id = ? AND cuisine = ?", userID, cuisine).Delete(&models.UserPreference{})
 	c.JSON(http.StatusOK, gin.H{"message": "已删除偏好"})
 }
-	userID := middleware.GetUserID(c)
 
-	var req models.CreatePreferenceRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效: " + err.Error()})
-		return
-	}
-
-	weight := req.Weight
-	if weight < 1 {
-		weight = 1
-	}
-
-	db := database.GetDB()
-
-	// 检查是否已存在该菜系偏好
-	var existing models.UserPreference
-	result := db.Where("user_id = ? AND cuisine = ?", userID, req.Cuisine).First(&existing)
-	if result.Error == nil {
-		// 已存在，更新权重
-		db.Model(&existing).Update("weight", weight)
-		existing.Weight = weight
-		c.JSON(http.StatusOK, existing)
-		return
-	}
-
-	// 新建偏好
-	pref := models.UserPreference{
-		UserID:  userID,
-		Cuisine: req.Cuisine,
-		Weight:  weight,
-	}
-
-	if result := db.Create(&pref); result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建偏好失败"})
-		return
-	}
 
 	c.JSON(http.StatusCreated, pref)
 }
