@@ -16,18 +16,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// OpenRouterRequest OpenRouter 请求结构
-type OpenRouterRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
+// Gemini API 请求结构
+type GeminiRequest struct {
+	Contents []GeminiContent `json:"contents"`
 }
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+type GeminiContent struct {
+	Parts []GeminiPart `json:"parts"`
 }
 
-// GetRecommendations 调用 OpenRouter 推荐菜品
+type GeminiPart struct {
+	Text string `json:"text"`
+}
+
+// GetRecommendations 调用 Gemini 推荐菜品
 func GetRecommendations(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	db := database.GetDB()
@@ -62,28 +64,31 @@ func GetRecommendations(c *gin.Context) {
 		strings.Join(ingredients, "、"),
 		strings.Join(tastes, "、"))
 
-	// 4. 调用 OpenRouter
-	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	// 4. 调用 Gemini API
+	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 LLM API Key"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 GEMINI_API_KEY"})
 		return
 	}
 
 	modelName := os.Getenv("LLM_MODEL")
-	if modelName == "" {
-		modelName = "google/gemini-flash-1.5-exp:free"
+	if modelName == "" || strings.Contains(modelName, "openrouter") {
+		modelName = "gemini-1.5-flash"
 	}
 
-	reqBody := OpenRouterRequest{
-		Model: modelName,
-		Messages: []Message{
-			{Role: "user", Content: prompt},
+	reqBody := GeminiRequest{
+		Contents: []GeminiContent{
+			{
+				Parts: []GeminiPart{
+					{Text: prompt},
+				},
+			},
 		},
 	}
 
 	jsonData, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", modelName, apiKey)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
@@ -103,23 +108,37 @@ func GetRecommendations(c *gin.Context) {
 		return
 	}
 
-	choices, ok := result["choices"].([]interface{})
-	if !ok || len(choices) == 0 {
+	candidates, ok := result["candidates"].([]interface{})
+	if !ok || len(candidates) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回有效结果", "details": result})
 		return
 	}
 
-	firstChoice, ok := choices[0].(map[string]interface{})
+	firstCandidate, ok := candidates[0].(map[string]interface{})
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 响应格式异常"})
 		return
 	}
-	message, ok := firstChoice["message"].(map[string]interface{})
+
+	msgContent, ok := firstCandidate["content"].(map[string]interface{})
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 消息体异常"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM content 体异常"})
 		return
 	}
-	content, _ := message["content"].(string)
+
+	parts, ok := msgContent["parts"].([]interface{})
+	if !ok || len(parts) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM parts 异常"})
+		return
+	}
+
+	firstPart, ok := parts[0].(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM text 异常"})
+		return
+	}
+
+	content, _ := firstPart["text"].(string)
 
 	// 尝试解析内层 JSON 数组
 	var recommendations []map[string]string
