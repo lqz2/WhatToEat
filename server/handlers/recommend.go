@@ -58,7 +58,7 @@ func GetRecommendations(c *gin.Context) {
 		tastes = append(tastes, p.Cuisine)
 	}
 
-	prompt := fmt.Sprintf("我的冰箱里有这些食材：%s。我平时喜欢吃：%s。请结合这些信息，为我推荐 3 道菜，并给出菜名、推荐理由（结合我的食材）以及非常简短的做法提示。请直接返回中文，不要带 Markdown 格式符号。",
+	prompt := fmt.Sprintf("你是一位严谨的私厨。现在我的冰箱里【只有】这些食材：%s。我的口味偏好是：%s。请以此为基础推荐 3 道菜。要求：1. 严格以现有食材为主，除了食盐、油、酱油等基础调料外，如果需要额外添加我冰箱里没有的食材（如鸡蛋、豆腐、肉类等），必须在‘推荐理由’中明确标注‘（注意：需自备XX）’。2. 如果食材实在无法做菜，请推荐最接近的吃法或建议。3. 直接返回结果，不要 Markdown 格式，不要有‘好的’等废话。格式：菜名：xxx\n推荐理由：xxx\n做法提示：xxx。",
 		strings.Join(ingredients, "、"),
 		strings.Join(tastes, "、"))
 
