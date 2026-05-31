@@ -18,12 +18,7 @@ import (
 
 // Gemini API 请求结构
 type GeminiRequest struct {
-	Contents         []GeminiContent         `json:"contents"`
-	GenerationConfig *GeminiGenerationConfig `json:"generationConfig,omitempty"`
-}
-
-type GeminiGenerationConfig struct {
-	ResponseMimeType string `json:"responseMimeType,omitempty"`
+	Contents []GeminiContent `json:"contents"`
 }
 
 type GeminiContent struct {
@@ -88,9 +83,6 @@ func GetRecommendations(c *gin.Context) {
 					{Text: prompt},
 				},
 			},
-		},
-		GenerationConfig: &GeminiGenerationConfig{
-			ResponseMimeType: "application/json",
 		},
 	}
 
@@ -180,12 +172,12 @@ func GetPreferences(c *gin.Context) {
 	db := database.GetDB()
 
 	var preferences []models.UserPreference
-	db.Where("user_id = ?", userID).Order("weight DESC").Find(&preferences)
+	db.Where("user_id = ?", userID).Find(&preferences)
 
 	c.JSON(http.StatusOK, preferences)
 }
 
-// CreatePreference 设置菜系偏好
+// CreatePreference 设置菜系及口味偏好
 func CreatePreference(c *gin.Context) {
 	var pref models.UserPreference
 	if err := c.ShouldBindJSON(&pref); err != nil {
@@ -197,12 +189,9 @@ func CreatePreference(c *gin.Context) {
 	pref.UserID = userID
 
 	db := database.GetDB()
-	// 如果已存在则更新，不存在则创建
+	// 如果已存在则忽略，不存在则创建标签
 	var existing models.UserPreference
-	if err := db.Where("user_id = ? AND cuisine = ?", userID, pref.Cuisine).First(&existing).Error; err == nil {
-		existing.Weight = pref.Weight
-		db.Save(&existing)
-	} else {
+	if err := db.Where("user_id = ? AND cuisine = ?", userID, pref.Cuisine).First(&existing).Error; err != nil {
 		db.Create(&pref)
 	}
 

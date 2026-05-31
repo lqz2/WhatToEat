@@ -17,12 +17,11 @@ func (FridgeItem) TableName() string {
 	return "fridge_items"
 }
 
-// UserPreference 用户菜系偏好模型
+// UserPreference 用户菜系和口味偏好模型
 type UserPreference struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
 	UserID    string    `json:"user_id" gorm:"type:uuid;not null"`
 	Cuisine   string    `json:"cuisine" gorm:"size:50;not null"`
-	Weight    int       `json:"weight" gorm:"default:1"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
@@ -45,7 +44,6 @@ func (SharedMenu) TableName() string {
 // CreatePreferenceRequest 创建偏好请求
 type CreatePreferenceRequest struct {
 	Cuisine string `json:"cuisine" binding:"required"`
-	Weight  int    `json:"weight"`
 }
 
 // ShareRequest 共享请求

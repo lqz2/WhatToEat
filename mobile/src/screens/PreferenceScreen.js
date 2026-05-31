@@ -1,25 +1,33 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, Alert, FlatList, RefreshControl } from "react-native";
+import { View, Text, TouchableOpacity, Alert, RefreshControl, ScrollView } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { recommendAPI } from "../services/api";
 
-const CUISINE_OPTIONS = [
-  "川菜",
-  "粤菜",
-  "湘菜",
-  "鲁菜",
-  "浙菜",
-  "闽菜",
-  "苏菜",
-  "徽菜",
-  "东北菜",
-  "家常菜",
-  "西餐",
-  "日料",
-  "韩餐",
-  "东南亚菜",
-  "其他",
+const TAG_OPTIONS = [
+  "川菜", "粤菜", "湘菜", "鲁菜", "浙菜", "闽菜", "苏菜", "徽菜", 
+  "东北菜", "家常菜", "西餐", "日料", "韩餐", "东南亚菜", 
+  "偏辣", "偏甜", "偏酸", "清淡", "少油", "重口味", "无辣不欢", "减脂餐", "其他"
 ];
+
+const getColorTheme = (index) => {
+  const themes = [
+    { bg: "bg-red-100", text: "text-red-700", border: "border-red-200" },
+    { bg: "bg-orange-100", text: "text-orange-700", border: "border-orange-200" },
+    { bg: "bg-amber-100", text: "text-amber-700", border: "border-amber-200" },
+    { bg: "bg-green-100", text: "text-green-700", border: "border-green-200" },
+    { bg: "bg-emerald-100", text: "text-emerald-700", border: "border-emerald-200" },
+    { bg: "bg-teal-100", text: "text-teal-700", border: "border-teal-200" },
+    { bg: "bg-cyan-100", text: "text-cyan-700", border: "border-cyan-200" },
+    { bg: "bg-blue-100", text: "text-blue-700", border: "border-blue-200" },
+    { bg: "bg-indigo-100", text: "text-indigo-700", border: "border-indigo-200" },
+    { bg: "bg-violet-100", text: "text-violet-700", border: "border-violet-200" },
+    { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
+    { bg: "bg-fuchsia-100", text: "text-fuchsia-700", border: "border-fuchsia-200" },
+    { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-200" },
+    { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-200" }
+  ];
+  return themes[index % themes.length];
+};
 
 export default function PreferenceScreen() {
   const [preferences, setPreferences] = useState([]);
@@ -39,7 +47,7 @@ export default function PreferenceScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchPreferences();
-    }, []),
+    }, [])
   );
 
   const handleAddPreference = async (cuisine) => {
@@ -60,91 +68,62 @@ export default function PreferenceScreen() {
     }
   };
 
-  const handleWeightChange = async (cuisine, newWeight) => {
-    try {
-      await recommendAPI.createPreference(cuisine, newWeight);
-      fetchPreferences();
-    } catch (error) {
-      Alert.alert("错误", "更新权重失败");
-    }
-  };
-
   const preferredCuisines = preferences.map((p) => p.cuisine);
-  const availableCuisines = CUISINE_OPTIONS.filter((c) => !preferredCuisines.includes(c));
+  const availableCuisines = TAG_OPTIONS.filter((c) => !preferredCuisines.includes(c));
 
   return (
     <View className="flex-1 bg-gray-50">
       <View className="bg-white pt-12 pb-4 px-5 border-b border-gray-100">
         <Text className="text-2xl font-bold text-dark">口味偏好</Text>
-        <Text className="text-gray-500 mt-1">设置你喜欢的菜系，获取个性化推荐</Text>
+        <Text className="text-gray-500 mt-1">定制你的专属 AI 私厨标签</Text>
       </View>
 
-      <FlatList
-        data={preferences}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerClassName="p-4"
+      <ScrollView 
+        className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchPreferences} tintColor="#FF6B35" />}
-        ListHeaderComponent={
-          preferences.length > 0 ? (
-            <Text className="text-sm font-medium text-gray-600 mb-3">已选菜系（点击 +/- 调整权重）</Text>
-          ) : null
-        }
-        renderItem={({ item }) => (
-          <View className="bg-white rounded-xl p-4 mb-3 flex-row items-center justify-between border border-gray-100">
-            <View className="flex-row items-center flex-1">
-              <View className="bg-primary/10 px-3 py-1.5 rounded-full mr-3">
-                <Text className="text-primary font-medium">{item.cuisine}</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-gray-500 text-sm mr-2">权重: {item.weight}</Text>
-              </View>
+      >
+        <View className="p-5">
+          <Text className="text-base font-bold text-gray-800 mb-4">已选标签 (点击取消)</Text>
+          {preferredCuisines.length > 0 ? (
+            <View className="flex-row flex-wrap">
+              {preferredCuisines.map((item, index) => {
+                const tagIndex = TAG_OPTIONS.indexOf(item);
+                const theme = getColorTheme(tagIndex !== -1 ? tagIndex : index);
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    className={`px-4 py-2 rounded-full mr-3 mb-3 border ${theme.bg} ${theme.border} shadow-sm`}
+                    onPress={() => handleRemovePreference(item)}
+                  >
+                    <Text className={`text-base font-bold ${theme.text}`}>{item} ×</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-
-            <View className="flex-row items-center">
-              <TouchableOpacity
-                className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center mr-2"
-                onPress={() => handleWeightChange(item.cuisine, Math.max(1, item.weight - 1))}
-              >
-                <Text className="text-gray-600 font-bold">-</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="w-8 h-8 rounded-full bg-primary/10 items-center justify-center mr-3"
-                onPress={() => handleWeightChange(item.cuisine, item.weight + 1)}
-              >
-                <Text className="text-primary font-bold">+</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleRemovePreference(item.cuisine)}>
-                <Text className="text-red-500 text-lg">✕</Text>
-              </TouchableOpacity>
+          ) : (
+            <View className="py-6 items-center bg-white rounded-2xl border border-gray-100 mb-4">
+              <Text className="text-3xl mb-2">🍽️</Text>
+              <Text className="text-gray-400">目前还没有选择任何偏好标签</Text>
             </View>
-          </View>
-        )}
-        ListEmptyComponent={
-          <View className="py-10 items-center">
-            <Text className="text-4xl mb-3">🎯</Text>
-            <Text className="text-gray-500">还没有设置口味偏好</Text>
-            <Text className="text-gray-400 text-sm mt-1">从下方选择你喜欢的菜系</Text>
-          </View>
-        }
-      />
+          )}
 
-      {/* 添加菜系 */}
-      {availableCuisines.length > 0 && (
-        <View className="bg-white border-t border-gray-100 p-4">
-          <Text className="text-sm font-medium text-gray-600 mb-3">添加菜系偏好</Text>
+          <Text className="text-base font-bold text-gray-800 mt-6 mb-4">添加更多标签</Text>
           <View className="flex-row flex-wrap">
-            {availableCuisines.map((cuisine) => (
-              <TouchableOpacity
-                key={cuisine}
-                className="bg-gray-100 px-3 py-2 rounded-full mr-2 mb-2"
-                onPress={() => handleAddPreference(cuisine)}
-              >
-                <Text className="text-gray-700">{cuisine}</Text>
-              </TouchableOpacity>
-            ))}
+            {availableCuisines.map((cuisine) => {
+              const theme = getColorTheme(TAG_OPTIONS.indexOf(cuisine));
+              return (
+                <TouchableOpacity
+                  key={cuisine}
+                  className="bg-white px-4 py-2 rounded-full mr-3 mb-3 border border-gray-200 shadow-sm"
+                  onPress={() => handleAddPreference(cuisine)}
+                >
+                  <Text className="text-base font-medium text-gray-600">{cuisine} +</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
