@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#FF6B35"/>
+  
+  <!-- 筷子 -->
+  <g transform="rotate(45, 512, 512)">
+    <rect x="400" y="200" width="20" height="600" rx="10" fill="#FFEFE5" />
+    <rect x="440" y="200" width="20" height="600" rx="10" fill="#FFEFE5" />
+  </g>
+
+  <!-- 热气 -->
+  <path d="M440,320 Q460,250 490,200" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" opacity="0.6"/>
+  <path d="M520,340 Q550,260 580,220" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- 碗的主体 -->
+  <path d="M200,450 C200,450 200,750 512,750 C824,750 824,450 824,450 Z" fill="#FFFFFF"/>
+  <path d="M200,450 C200,380 824,380 824,450" fill="#FFF8F0"/>
+  
+  <!-- 碗的底部底座 -->
+  <path d="M400,750 L420,820 L604,820 L624,750 Z" fill="#FFE8D6"/>
+  
+  <!-- 碗上的笑脸（卡通元素） -->
+  <circle cx="420" cy="550" r="24" fill="#333333"/>
+  <circle cx="604" cy="550" r="24" fill="#333333"/>
+  <path d="M460,600 Q512,650 564,600" fill="none" stroke="#333333" stroke-width="16" stroke-linecap="round"/>
+  
+  <!-- 腮红 -->
+  <ellipse cx="360" cy="580" rx="20" ry="12" fill="#FFB3B3" opacity="0.8"/>
+  <ellipse cx="664" cy="580" rx="20" ry="12" fill="#FFB3B3" opacity="0.8"/>
+  
+  <!-- 面条/食物 -->
+  <path d="M300,430 Q400,350 500,430 T700,410" fill="none" stroke="#FFCF54" stroke-width="30" stroke-linecap="round"/>
+  <path d="M350,450 Q450,380 550,450 T750,430" fill="none" stroke="#FFBC42" stroke-width="24" stroke-linecap="round"/>
+</svg>
