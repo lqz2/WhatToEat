@@ -47,7 +47,7 @@ export default function ShareScreen() {
     const fullEmail = email.includes("@") ? email.trim() : `${email.trim()}@whattoeat.com`;
     try {
       await shareAPI.shareMenu(fullEmail);
-      Alert.alert("成功", `已共享菜单给 ${fullEmail}`);
+      Alert.alert("成功", `已与 ${fullEmail} 共享冰箱`);
       setEmail("");
       fetchSharedList();
     } catch (error) {
@@ -58,7 +58,7 @@ export default function ShareScreen() {
   };
 
   const handleCancelShare = (id, email) => {
-    Alert.alert("取消共享", `确定要取消与 ${email} 的共享吗？`, [
+    Alert.alert("停止共享", `确定要停止与 ${email} 共享冰箱吗？`, [
       { text: "取消", style: "cancel" },
       {
         text: "确定",
@@ -68,7 +68,7 @@ export default function ShareScreen() {
             await shareAPI.cancelShare(id);
             fetchSharedList();
           } catch (error) {
-            Alert.alert("错误", "取消共享失败");
+            Alert.alert("错误", "操作失败");
           }
         },
       },
@@ -77,14 +77,14 @@ export default function ShareScreen() {
 
   return (
     <KeyboardAvoidingView className="flex-1 bg-gray-50" behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <View className="bg-white pt-12 pb-4 px-5 border-b border-gray-100">
-        <Text className="text-2xl font-bold text-dark">菜单共享</Text>
-        <Text className="text-gray-500 mt-1">与家人朋友共享你的菜单</Text>
+      <View className="bg-white pt-6 pb-4 px-5 border-b border-gray-100">
+        <Text className="text-2xl font-bold text-dark">冰箱共享</Text>
+        <Text className="text-gray-500 mt-1">与家人共享食材，共同获取 AI 推荐</Text>
       </View>
 
       {/* 添加共享 */}
       <View className="bg-white p-4 border-b border-gray-100">
-        <Text className="text-sm font-medium text-gray-600 mb-2">共享给好友（输入对方邮箱）</Text>
+        <Text className="text-sm font-medium text-gray-600 mb-2">邀请家人（输入对方邮箱）</Text>
         <View className="flex-row">
           <TextInput
             className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-base bg-gray-50 mr-3"
