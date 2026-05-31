@@ -26,7 +26,7 @@ jobs:
           cd server
           GOOS=linux GOARCH=amd64 go build -o whattoeat-server main.go
 
-- name: Prepare VPS for new binary
+      - name: Prepare VPS for new binary
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
