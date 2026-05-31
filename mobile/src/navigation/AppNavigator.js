@@ -8,6 +8,7 @@ import HomeScreen from "../screens/HomeScreen";
 import FridgeScreen from "../screens/FridgeScreen";
 import PreferenceScreen from "../screens/PreferenceScreen";
 import ShareScreen from "../screens/ShareScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import { useAuth } from "../contexts/AuthContext";
@@ -55,22 +56,26 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Preferences"
-        component={PreferenceScreen}
+        name="ProfileTab"
+        component={ProfileStack}
         options={{
-          tabBarLabel: "偏好",
-          tabBarIcon: ({ focused }) => <TabIcon icon="🎯" focused={focused} />,
-        }}
-      />
-      <Tab.Screen
-        name="Share"
-        component={ShareScreen}
-        options={{
-          tabBarLabel: "共享",
-          tabBarIcon: ({ focused }) => <TabIcon icon="🤝" focused={focused} />,
+          tabBarLabel: "我的",
+          tabBarIcon: ({ focused }) => <TabIcon icon="👤" focused={focused} />,
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+// “我的”页面堆栈
+function ProfileStack() {
+  const Stack = createNativeStackNavigator();
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Share" component={ShareScreen} options={{ title: "菜单共享" }} />
+      <Stack.Screen name="Preferences" component={PreferenceScreen} options={{ title: "口味偏好" }} />
+    </Stack.Navigator>
   );
 }
 

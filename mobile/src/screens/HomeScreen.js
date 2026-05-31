@@ -63,9 +63,6 @@ export default function HomeScreen() {
           <Text className="text-2xl font-bold text-dark">今日 AI 推荐</Text>
           <Text className="text-gray-500 mt-1">基于你冰箱里的食材</Text>
         </View>
-        <TouchableOpacity onPress={signOut} className="bg-gray-100 p-2 rounded-full">
-          <Text className="text-base">退出</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView
