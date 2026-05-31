@@ -98,17 +98,28 @@ func GetRecommendations(c *gin.Context) {
 
 	// 解析响应
 	var result map[string]interface{}
-	json.Unmarshal(body, &result)
-
-	choices := result["choices"].([]interface{})
-	if len(choices) == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回结果"})
+	if err := json.Unmarshal(body, &result); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "解析 LLM 响应失败", "raw": string(body)})
 		return
 	}
 
-	firstChoice := choices[0].(map[string]interface{})
-	message := firstChoice["message"].(map[string]interface{})
-	content := message["content"].(string)
+	choices, ok := result["choices"].([]interface{})
+	if !ok || len(choices) == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回有效结果", "details": result})
+		return
+	}
+
+	firstChoice, ok := choices[0].(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 响应格式异常"})
+		return
+	}
+	message, ok := firstChoice["message"].(map[string]interface{})
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 消息体异常"})
+		return
+	}
+	content, _ := message["content"].(string)
 
 	// 尝试解析内层 JSON 数组
 	var recommendations []map[string]string
