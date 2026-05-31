@@ -96,19 +96,7 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen
-              name="AddDish"
-              component={AddDishScreen}
-              options={{
-                headerShown: true,
-                title: "",
-                headerBackTitle: "返回",
-                headerStyle: { backgroundColor: "#F9FAFB" },
-              }}
-            />
-          </>
+          <Stack.Screen name="Main" component={MainTabs} />
         ) : (
           <Stack.Screen name="Auth" component={AuthStack} />
         )}

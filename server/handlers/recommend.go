@@ -58,20 +58,20 @@ func GetRecommendations(c *gin.Context) {
 		tastes = append(tastes, p.Cuisine)
 	}
 
-	prompt := fmt.Sprintf("你是一位严谨的私厨。现在我的冰箱里【只有】这些食材：%s。我的口味偏好是：%s。请以此为基础推荐 3 道菜。要求：1. 严格以现有食材为主，除了食盐、油、酱油等基础调料外，如果需要额外添加我冰箱里没有的食材（如鸡蛋、豆腐、肉类等），必须在‘推荐理由’中明确标注‘（注意：需自备XX）’。2. 如果食材实在无法做菜，请推荐最接近的吃法或建议。3. 直接返回结果，不要 Markdown 格式，不要有‘好的’等废话。格式：菜名：xxx\n推荐理由：xxx\n做法提示：xxx。",
+	prompt := fmt.Sprintf("你是一位严谨的私厨。现在我的冰箱里【只有】这些食材：%s。我的口味偏好是：%s。请以此为基础推荐 1 到 5 道菜（根据食材丰富程度决定数量）。\n\n要求：\n1. 严格以现有食材为主。如果需要自备关键食材（如鸡蛋、肉类），必须在理由中注明。\n2. 必须以 JSON 数组格式返回，不要包含任何 Markdown 符号或多余文字。\n\nJSON 格式示例：\n[{\"name\": \"菜名\", \"reason\": \"理由\", \"steps\": \"做法\"}]",
 		strings.Join(ingredients, "、"),
 		strings.Join(tastes, "、"))
 
 	// 4. 调用 OpenRouter
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 LLM API Key (OPENROUTER_API_KEY)"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 LLM API Key"})
 		return
 	}
 
 	modelName := os.Getenv("LLM_MODEL")
 	if modelName == "" {
-		modelName = "openrouter/free" // 默认模型
+		modelName = "google/gemini-flash-1.5-exp:free"
 	}
 
 	reqBody := OpenRouterRequest{
@@ -84,8 +84,7 @@ func GetRecommendations(c *gin.Context) {
 	jsonData, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "https://openrouter.ai/api/v1/chat/completions", bytes.NewBuffer(jsonData))
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	req.Header.Set("Content-Type", "json")
-	req.Header.Set("HTTP-Referer", "https://whattoeat.com")
+	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -101,11 +100,6 @@ func GetRecommendations(c *gin.Context) {
 	var result map[string]interface{}
 	json.Unmarshal(body, &result)
 
-	if errData, ok := result["error"]; ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 报错", "details": errData})
-		return
-	}
-
 	choices := result["choices"].([]interface{})
 	if len(choices) == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "LLM 未返回结果"})
@@ -116,8 +110,28 @@ func GetRecommendations(c *gin.Context) {
 	message := firstChoice["message"].(map[string]interface{})
 	content := message["content"].(string)
 
+	// 尝试解析内层 JSON 数组
+	var recommendations []map[string]string
+	err = json.Unmarshal([]byte(content), &recommendations)
+	if err != nil {
+		// 如果 LLM 返回的不是纯 JSON，尝试清理一下（有时候模型会带 ```json）
+		cleanContent := strings.TrimSpace(content)
+		cleanContent = strings.TrimPrefix(cleanContent, "```json")
+		cleanContent = strings.TrimSuffix(cleanContent, "```")
+		err = json.Unmarshal([]byte(cleanContent), &recommendations)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"type": "text",
+			"data": content,
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"recommendations": content,
+		"type": "list",
+		"data": recommendations,
 	})
 }
 
