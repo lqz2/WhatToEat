@@ -15,13 +15,13 @@ import { recommendAPI } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function HomeScreen() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [recommendData, setRecommendData] = useState({ type: "text", data: "" });
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const CACHE_KEY = "CACHED_RECOMMENDATIONS";
-  const CACHE_TIME_KEY = "CACHED_RECOMMENDATIONS_TIME";
+  const CACHE_KEY = "CACHED_RECOMMENDATIONS_" + user?.id;
+  const CACHE_TIME_KEY = "CACHED_RECOMMENDATIONS_TIME_" + user?.id;
   const SIX_HOURS = 6 * 60 * 60 * 1000; // 6 小时的毫秒数
 
   const fetchRecommendations = async (forceRefresh = false) => {
@@ -67,7 +67,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchRecommendations(false); // 切换页面时，不强制刷新，优先走缓存
-    }, []),
+    }, [user?.id]),
   );
 
   const onRefresh = () => {

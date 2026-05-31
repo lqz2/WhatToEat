@@ -64,7 +64,7 @@ func GetRecommendations(c *gin.Context) {
 		strings.Join(ingredients, "、"),
 		strings.Join(tastes, "、"))
 
-	// 4. 调用 Gemini API
+	// 4. 调用   API
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "未配置 GEMINI_API_KEY"})
