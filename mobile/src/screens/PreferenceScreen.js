@@ -78,8 +78,7 @@ export default function PreferenceScreen() {
     // 2. 异步向服务器发送请求
     try {
       await recommendAPI.createPreference(cuisine, 1);
-      // 成功后静默拉取一下确保数据一致性 (不阻塞UI)
-      fetchPreferences();
+      // 注意：这里移除了 fetchPreferences() 以避免竞态条件导致的 UI 闪烁问题
     } catch (error) {
       // 发生错误，回退状态
       Alert.alert("错误", "添加偏好失败，请检查网络");
@@ -95,7 +94,7 @@ export default function PreferenceScreen() {
     // 2. 异步向服务器发送请求
     try {
       await recommendAPI.deletePreference(cuisine);
-      fetchPreferences();
+      // 注意：同样移除了 fetchPreferences() 避免竞态闪烁
     } catch (error) {
       // 发生错误，回退状态
       Alert.alert("错误", "删除偏好失败，请检查网络");
