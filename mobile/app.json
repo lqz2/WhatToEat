@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "今天吃啥",
-    "slug": "whattoeat",
+    "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
