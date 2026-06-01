@@ -4,10 +4,22 @@ import (
 	"time"
 )
 
+// User 本地用户模型
+type User struct {
+	ID        string    `json:"id" gorm:"type:text;primaryKey"`
+	Email     string    `json:"email" gorm:"size:100;uniqueIndex;not null"`
+	Password  string    `json:"-" gorm:"size:255;not null"`
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+}
+
+func (User) TableName() string {
+	return "users"
+}
+
 // FridgeItem 冰箱食材模型
 type FridgeItem struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    string    `json:"user_id" gorm:"type:uuid;not null"`
+	UserID    string    `json:"user_id" gorm:"type:text;not null"`
 	Name      string    `json:"name" gorm:"size:100;not null"`
 	Quantity  string    `json:"quantity" gorm:"size:50"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
@@ -20,7 +32,7 @@ func (FridgeItem) TableName() string {
 // UserPreference 用户菜系和口味偏好模型
 type UserPreference struct {
 	ID        uint      `json:"id" gorm:"primaryKey"`
-	UserID    string    `json:"user_id" gorm:"type:uuid;not null"`
+	UserID    string    `json:"user_id" gorm:"type:text;not null"`
 	Cuisine   string    `json:"cuisine" gorm:"size:50;not null"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
@@ -32,8 +44,8 @@ func (UserPreference) TableName() string {
 // SharedMenu 菜单共享模型
 type SharedMenu struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
-	OwnerID      string    `json:"owner_id" gorm:"type:uuid;not null"`
-	SharedWithID string    `json:"shared_with_id" gorm:"type:uuid;not null"`
+	OwnerID      string    `json:"owner_id" gorm:"type:text;not null"`
+	SharedWithID string    `json:"shared_with_id" gorm:"type:text;not null"`
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 

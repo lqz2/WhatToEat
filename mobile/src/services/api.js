@@ -1,5 +1,5 @@
 import axios from "axios";
-import { supabase } from "./supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 后端 API 地址，部署后替换为公网 URL
 const API_BASE_URL = "https://eat.13129988.xyz/api";
@@ -16,11 +16,9 @@ const api = axios.create({
 // 请求拦截器：自动附加 JWT Token
 api.interceptors.request.use(
   async (config) => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      config.headers.Authorization = `Bearer ${session.access_token}`;
+    const token = await AsyncStorage.getItem("auth_token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -32,19 +30,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token 过期，尝试刷新
-      const {
-        data: { session },
-        error: refreshError,
-      } = await supabase.auth.refreshSession();
-      if (refreshError || !session) {
-        // 刷新失败，退出登录
-        await supabase.auth.signOut();
-        return Promise.reject(error);
-      }
-      // 使用新 Token 重试
-      error.config.headers.Authorization = `Bearer ${session.access_token}`;
-      return api.request(error.config);
+      // Token 过期，清除本地存储，促使用户重新登录
+      await AsyncStorage.multiRemove(["auth_token", "user_info"]);
     }
     return Promise.reject(error);
   },

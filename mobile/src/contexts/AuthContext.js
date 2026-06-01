@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "../services/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authAPI } from "../services/api";
 
 const AuthContext = createContext({});
 
@@ -11,46 +12,76 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 获取初始 session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // 从 AsyncStorage 初始化 session 和 user
+    const bootstrapAsync = async () => {
+      try {
+        const token = await AsyncStorage.getItem("auth_token");
+        const userInfoStr = await AsyncStorage.getItem("user_info");
 
-    // 监听认证状态变化
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+        if (token && userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          setSession({ access_token: token });
+          setUser(userInfo);
+        }
+      } catch (e) {
+        console.error("恢复登录状态失败:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    bootstrapAsync();
   }, []);
 
   const signUp = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
+    try {
+      const response = await authAPI.register(email, password);
+      const data = response.data; // models.AuthResponse: access_token, user_id, email
+
+      // 保存至本地存储
+      await AsyncStorage.setItem("auth_token", data.access_token);
+      const userInfo = { id: data.user_id, email: data.email };
+      await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
+
+      // 更新状态
+      setSession({ access_token: data.access_token });
+      setUser(userInfo);
+      return data;
+    } catch (error) {
+      // 兼容原有的错误格式
+      const errorMsg = error.response?.data?.error || error.message || "注册失败";
+      throw new Error(errorMsg);
+    }
   };
 
   const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
+    try {
+      const response = await authAPI.login(email, password);
+      const data = response.data; // models.AuthResponse: access_token, user_id, email
+
+      // 保存至本地存储
+      await AsyncStorage.setItem("auth_token", data.access_token);
+      const userInfo = { id: data.user_id, email: data.email };
+      await AsyncStorage.setItem("user_info", JSON.stringify(userInfo));
+
+      // 更新状态
+      setSession({ access_token: data.access_token });
+      setUser(userInfo);
+      return data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.message || "登录失败";
+      throw new Error(errorMsg);
+    }
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      await AsyncStorage.multiRemove(["auth_token", "user_info"]);
+      setSession(null);
+      setUser(null);
+    } catch (error) {
+      throw new Error("退出登录失败");
+    }
   };
 
   const value = {

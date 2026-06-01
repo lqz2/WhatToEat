@@ -1,9 +1,7 @@
 package middleware
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -12,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// AuthMiddleware JWT 认证中间件，验证 Supabase 签发的 Token
+// AuthMiddleware JWT 认证中间件，验证本地签发的 Token
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -29,21 +27,17 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// 优先使用本地 JWT Secret 验证（Supabase JWT Secret）
-		jwtSecret := os.Getenv("SUPABASE_JWT_SECRET")
-		if jwtSecret != "" {
-			userID, err := verifyJWT(tokenString, jwtSecret)
-			if err == nil {
-				c.Set("user_id", userID)
-				c.Next()
-				return
-			}
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			jwtSecret = os.Getenv("SUPABASE_JWT_SECRET")
+		}
+		if jwtSecret == "" {
+			jwtSecret = "whattoeat_default_jwt_secret_key_2026"
 		}
 
-		// 降级：通过 Supabase Auth API 验证 Token
-		userID, err := verifyWithSupabase(tokenString)
+		userID, err := verifyJWT(tokenString, jwtSecret)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的 Token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的 Token: " + err.Error()})
 			c.Abort()
 			return
 		}
@@ -75,48 +69,6 @@ func verifyJWT(tokenString, secret string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid token")
-}
-
-// verifyWithSupabase 通过 Supabase Auth API 验证 Token
-func verifyWithSupabase(tokenString string) (string, error) {
-	supabaseURL := os.Getenv("SUPABASE_URL")
-	supabaseKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-
-	if supabaseURL == "" || supabaseKey == "" {
-		return "", fmt.Errorf("supabase config missing")
-	}
-
-	req, err := http.NewRequest("GET", supabaseURL+"/auth/v1/user", nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Authorization", "Bearer "+tokenString)
-	req.Header.Set("apikey", supabaseKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("invalid token")
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	var result struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-
-	return result.ID, nil
 }
 
 // GetUserID 从 Gin Context 中获取当前用户 ID

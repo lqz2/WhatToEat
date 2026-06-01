@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
-	"os"
 	"strconv"
 
 	"whattoeat/database"
@@ -140,71 +137,22 @@ func GetSharedList(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// lookupUserByEmail 通过 Supabase Admin API 根据邮箱查找用户
+// lookupUserByEmail 本地数据库根据邮箱查找用户
 func lookupUserByEmail(email string) (string, string, error) {
-	supabaseURL := os.Getenv("SUPABASE_URL")
-	serviceKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-
-	req, err := http.NewRequest("GET", supabaseURL+"/auth/v1/admin/users?filter="+email, nil)
-	if err != nil {
+	db := database.GetDB()
+	var user models.User
+	if err := db.Where("email = ?", email).First(&user).Error; err != nil {
 		return "", "", err
 	}
-	req.Header.Set("apikey", serviceKey)
-	req.Header.Set("Authorization", "Bearer "+serviceKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", "", err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	var result struct {
-		Users []struct {
-			ID    string `json:"id"`
-			Email string `json:"email"`
-		} `json:"users"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", "", err
-	}
-
-	for _, user := range result.Users {
-		if user.Email == email {
-			return user.ID, user.Email, nil
-		}
-	}
-
-	return "", "", nil
+	return user.ID, user.Email, nil
 }
 
-// getUserEmailByID 通过 Supabase Admin API 根据用户 ID 获取邮箱
+// getUserEmailByID 本地数据库根据用户 ID 获取邮箱
 func getUserEmailByID(userID string) (string, error) {
-	supabaseURL := os.Getenv("SUPABASE_URL")
-	serviceKey := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-
-	req, err := http.NewRequest("GET", supabaseURL+"/auth/v1/admin/users/"+userID, nil)
-	if err != nil {
+	db := database.GetDB()
+	var user models.User
+	if err := db.Where("id = ?", userID).First(&user).Error; err != nil {
 		return "", err
 	}
-	req.Header.Set("apikey", serviceKey)
-	req.Header.Set("Authorization", "Bearer "+serviceKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	var result struct {
-		Email string `json:"email"`
-	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		return "", err
-	}
-
-	return result.Email, nil
+	return user.Email, nil
 }
