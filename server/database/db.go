@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	"whattoeat/models"
 
 	"gorm.io/driver/postgres"
@@ -28,6 +29,19 @@ func Init() {
 		log.Fatalf("数据库连接失败: %v", err)
 	}
 
+	// === 连接池优化 (降低网络连接延迟) ===
+	sqlDB, err := DB.DB()
+	if err != nil {
+		log.Fatalf("获取底层数据库实例失败: %v", err)
+	}
+
+	// 限制空闲连接数，保持长连接不断开，省去每次重新建立TCP/TLS握手的时间
+	sqlDB.SetMaxIdleConns(10)
+	// 限制最大打开连接数
+	sqlDB.SetMaxOpenConns(50)
+	// 长连接的复用时间设置为1小时
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
 	// 自动迁移
 	err = DB.AutoMigrate(
 		&models.FridgeItem{},
@@ -38,7 +52,7 @@ func Init() {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 
-	fmt.Println("数据库连接并发起自动迁移成功")
+	fmt.Println("数据库连接并开启连接池，自动迁移成功")
 }
 
 // GetDB 获取数据库实例
