@@ -29,7 +29,7 @@ func ShareMenu(c *gin.Context) {
 		return
 	}
 
-	// 通过 Supabase Admin API 根据邮箱查找用户 ID
+	// 本地数据库根据邮箱查找用户 ID
 	targetUserID, email, err := lookupUserByEmail(req.SharedWithEmail)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "未找到该邮箱对应的用户"})

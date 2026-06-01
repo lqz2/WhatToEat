@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }) {
       return;
     }
     setLoading(true);
-    // 自动补全后缀，使之符合 Supabase 的 Email 格式要求
+    // 自动补全后缀，使之符合标准的 Email 格式要求
     const email = username.includes("@") ? username : `${username}@whattoeat.com`;
     try {
       await signIn(email, password);

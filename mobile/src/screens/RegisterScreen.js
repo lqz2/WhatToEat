@@ -38,8 +38,7 @@ export default function RegisterScreen({ navigation }) {
     const email = username.includes("@") ? username : `${username}@whattoeat.com`;
     try {
       await signUp(email, password);
-      Alert.alert("注册成功", "请登录");
-      navigation.navigate("Login");
+      Alert.alert("注册成功", "欢迎使用今天吃什么！");
     } catch (error) {
       Alert.alert("注册失败", error.message);
     } finally {
