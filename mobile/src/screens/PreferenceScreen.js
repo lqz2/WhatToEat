@@ -4,9 +4,29 @@ import { useFocusEffect } from "@react-navigation/native";
 import { recommendAPI } from "../services/api";
 
 const TAG_OPTIONS = [
-  "川菜", "粤菜", "湘菜", "鲁菜", "浙菜", "闽菜", "苏菜", "徽菜", 
-  "东北菜", "家常菜", "西餐", "日料", "韩餐", "东南亚菜", 
-  "偏辣", "偏甜", "偏酸", "清淡", "少油", "重口味", "无辣不欢", "减脂餐", "其他"
+  "川菜",
+  "粤菜",
+  "湘菜",
+  "鲁菜",
+  "浙菜",
+  "闽菜",
+  "苏菜",
+  "徽菜",
+  "东北菜",
+  "家常菜",
+  "西餐",
+  "日料",
+  "韩餐",
+  "东南亚菜",
+  "偏辣",
+  "偏甜",
+  "偏酸",
+  "清淡",
+  "少油",
+  "重口味",
+  "无辣不欢",
+  "减脂餐",
+  "其他",
 ];
 
 const getColorTheme = (index) => {
@@ -24,7 +44,7 @@ const getColorTheme = (index) => {
     { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-200" },
     { bg: "bg-fuchsia-100", text: "text-fuchsia-700", border: "border-fuchsia-200" },
     { bg: "bg-pink-100", text: "text-pink-700", border: "border-pink-200" },
-    { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-200" }
+    { bg: "bg-rose-100", text: "text-rose-700", border: "border-rose-200" },
   ];
   return themes[index % themes.length];
 };
@@ -47,24 +67,39 @@ export default function PreferenceScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchPreferences();
-    }, [])
+    }, []),
   );
 
   const handleAddPreference = async (cuisine) => {
+    // 1. 乐观更新：立刻将新标签加入列表
+    const previousPreferences = [...preferences];
+    setPreferences((prev) => [...prev, { cuisine, weight: 1 }]);
+
+    // 2. 异步向服务器发送请求
     try {
       await recommendAPI.createPreference(cuisine, 1);
+      // 成功后静默拉取一下确保数据一致性 (不阻塞UI)
       fetchPreferences();
     } catch (error) {
-      Alert.alert("错误", "添加偏好失败");
+      // 发生错误，回退状态
+      Alert.alert("错误", "添加偏好失败，请检查网络");
+      setPreferences(previousPreferences);
     }
   };
 
   const handleRemovePreference = async (cuisine) => {
+    // 1. 乐观更新：立刻将该标签从列表中移除
+    const previousPreferences = [...preferences];
+    setPreferences((prev) => prev.filter((p) => p.cuisine !== cuisine));
+
+    // 2. 异步向服务器发送请求
     try {
       await recommendAPI.deletePreference(cuisine);
       fetchPreferences();
     } catch (error) {
-      Alert.alert("错误", "删除偏好失败");
+      // 发生错误，回退状态
+      Alert.alert("错误", "删除偏好失败，请检查网络");
+      setPreferences(previousPreferences);
     }
   };
 
@@ -78,7 +113,7 @@ export default function PreferenceScreen() {
         <Text className="text-gray-500 mt-1">定制你的专属 AI 私厨标签</Text>
       </View>
 
-      <ScrollView 
+      <ScrollView
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchPreferences} tintColor="#FF6B35" />}
       >
