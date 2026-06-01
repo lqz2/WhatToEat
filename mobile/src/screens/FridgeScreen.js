@@ -51,7 +51,7 @@ export default function FridgeScreen({ navigation }) {
       return;
     }
     setIsAdding(true);
-    
+
     // 1. 乐观更新（Optimistic Update）：提前更新UI，不等待网络请求
     const optimisticItem = {
       id: "temp-" + Date.now(), // 临时ID
@@ -59,9 +59,9 @@ export default function FridgeScreen({ navigation }) {
       name: newItemName.trim(),
       quantity: newItemQuantity.trim(),
     };
-    
+
     setItems((prevItems) => [optimisticItem, ...prevItems]);
-    
+
     // 关闭弹窗并清空状态，让用户感觉瞬间完成
     setModalVisible(false);
     setNewItemName("");
@@ -69,13 +69,13 @@ export default function FridgeScreen({ navigation }) {
 
     // 2. 发起真实的网络请求
     try {
-      await fridgeAPI.addFridgeItem(optimisticItem.name, optimisticItem.quantity);
-      // 成功后静默拉取真实数据重新赋值ID
-      fetchItems();
+      const response = await fridgeAPI.addFridgeItem(optimisticItem.name, optimisticItem.quantity);
+      // 成功后用服务器返回的真实数据（包含真ID）去替换那个假ID的临时条目
+      setItems((prevItems) => prevItems.map((item) => (item.id === optimisticItem.id ? response.data : item)));
     } catch (error) {
       // 若请求失败，则撤回乐观更新并报错
       Alert.alert("错误", "添加失败，可能是网络问题");
-      setItems((prevItems) => prevItems.filter(item => item.id !== optimisticItem.id));
+      setItems((prevItems) => prevItems.filter((item) => item.id !== optimisticItem.id));
     } finally {
       setIsAdding(false);
     }
@@ -84,16 +84,21 @@ export default function FridgeScreen({ navigation }) {
   const handleDelete = (id, name) => {
     const performDelete = async () => {
       // 1. 乐观更新：立刻在列表中移除该项
-      const previousItems = [...items];
+      const previousItems = items; // 保存引用，当闭包捕获不到最新数据时有一定风险，更好的做法是在catch中重新fetch，但乐观方案优先
       setItems((prevItems) => prevItems.filter((item) => item.id !== id));
-      
+
+      // 如果这是一个还没被服务器确认添加成功的占位条目，则直接移除它并且不发送请求
+      if (typeof id === "string" && id.startsWith("temp-")) {
+        return;
+      }
+
       // 2. 异步向服务器发送删除请求
       try {
         await fridgeAPI.deleteFridgeItem(id);
       } catch (error) {
-        // 请求如果失败，把数据恢复回去，并提示
+        // 请求如果失败，通过拉取最新数据来恢复状态（避免上方的 previousItems 引起别的竞态）
         Alert.alert("错误", "删除失败咯");
-        setItems(previousItems);
+        fetchItems();
       }
     };
 
@@ -169,8 +174,7 @@ export default function FridgeScreen({ navigation }) {
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center py-20">
             <Text className="text-4xl mb-3">🥦</Text>
-            <Text className="text-gray-500 text-center">冰箱是空的
-快去超市买点菜吧</Text>
+            <Text className="text-gray-500 text-center">冰箱是空的 快去超市买点菜吧</Text>
           </View>
         }
       />
