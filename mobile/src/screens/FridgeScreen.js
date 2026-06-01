@@ -51,14 +51,31 @@ export default function FridgeScreen({ navigation }) {
       return;
     }
     setIsAdding(true);
+    
+    // 1. 乐观更新（Optimistic Update）：提前更新UI，不等待网络请求
+    const optimisticItem = {
+      id: "temp-" + Date.now(), // 临时ID
+      user_id: user?.id,
+      name: newItemName.trim(),
+      quantity: newItemQuantity.trim(),
+    };
+    
+    setItems((prevItems) => [optimisticItem, ...prevItems]);
+    
+    // 关闭弹窗并清空状态，让用户感觉瞬间完成
+    setModalVisible(false);
+    setNewItemName("");
+    setNewItemQuantity("");
+
+    // 2. 发起真实的网络请求
     try {
-      await fridgeAPI.addFridgeItem(newItemName.trim(), newItemQuantity.trim());
-      setNewItemName("");
-      setNewItemQuantity("");
-      setModalVisible(false);
+      await fridgeAPI.addFridgeItem(optimisticItem.name, optimisticItem.quantity);
+      // 成功后静默拉取真实数据重新赋值ID
       fetchItems();
     } catch (error) {
-      Alert.alert("错误", "添加失败");
+      // 若请求失败，则撤回乐观更新并报错
+      Alert.alert("错误", "添加失败，可能是网络问题");
+      setItems((prevItems) => prevItems.filter(item => item.id !== optimisticItem.id));
     } finally {
       setIsAdding(false);
     }
@@ -66,11 +83,17 @@ export default function FridgeScreen({ navigation }) {
 
   const handleDelete = (id, name) => {
     const performDelete = async () => {
+      // 1. 乐观更新：立刻在列表中移除该项
+      const previousItems = [...items];
+      setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+      
+      // 2. 异步向服务器发送删除请求
       try {
         await fridgeAPI.deleteFridgeItem(id);
-        fetchItems();
       } catch (error) {
-        Alert.alert("错误", "操作失败");
+        // 请求如果失败，把数据恢复回去，并提示
+        Alert.alert("错误", "删除失败咯");
+        setItems(previousItems);
       }
     };
 
@@ -145,13 +168,13 @@ export default function FridgeScreen({ navigation }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FF6B35" />}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center py-20">
-            <Text className="text-4xl mb-3">🥚</Text>
-            <Text className="text-gray-500 text-center">冰箱是空的{"\n"}快去超市买点菜吧</Text>
+            <Text className="text-4xl mb-3">🥦</Text>
+            <Text className="text-gray-500 text-center">冰箱是空的
+快去超市买点菜吧</Text>
           </View>
         }
       />
 
-      {/* 添加食材的弹窗 */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View className="flex-1 justify-end bg-black/50">
           <View className="bg-white rounded-t-3xl p-6">
