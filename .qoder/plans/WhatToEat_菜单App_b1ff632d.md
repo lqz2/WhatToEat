@@ -2,16 +2,16 @@
 
 ## 技术栈总览
 
-| 层级    | 技术                      | 说明                                                     |
-| ------- | ------------------------- | -------------------------------------------------------- |
-| 前端    | React Native + Expo       | 跨平台移动端，Expo 简化开发和打包                        |
-| 导航    | React Navigation          | App 页面路由导航                                         |
-| UI 样式 | NativeWind (Tailwind CSS) | 基于 Tailwind CSS 的 React Native 样式方案               |
-| 认证    | Supabase Auth             | 模拟账号模式 (username@whattoeat.com)                    |
-| 后端    | Go + Gin                  | 高性能轻量 Web 框架                                      |
-| 数据库  | Supabase (PostgreSQL)     | 免费云端数据库                                           |
-| LLM API | OpenRouter (Free API)     | 聚合平台，调用免费的 LLM 模型 (如 Gemini/Llama/DeepSeek) |
-| ORM     | GORM + PostgreSQL 驱动    | Go 主流 ORM，简化数据库操作                              |
+| 层级    | 技术                      | 说明                                                |
+| ------- | ------------------------- | --------------------------------------------------- |
+| 前端    | React Native + Expo       | 跨平台移动端，Expo 简化开发和打包                   |
+| 导航    | React Navigation          | App 页面路由导航                                    |
+| UI 样式 | NativeWind (Tailwind CSS) | 基于 Tailwind CSS 的 React Native 样式方案          |
+| 认证    | 自建 JWT (Legacy Secret)  | 模拟账号模式 (username@whattoeat.com)，后端自签 JWT |
+| 后端    | Go + Gin                  | 高性能轻量 Web 框架                                 |
+| 数据库  | SQLite                    | 本地文件数据库，轻量无需外部服务                    |
+| LLM API | Gemini API                | Google Gemini 2.0 Flash，通过 GEMINI_API_KEY 调用   |
+| ORM     | GORM + SQLite 驱动        | Go 主流 ORM，简化数据库操作                         |
 
 ## 项目结构
 
@@ -38,52 +38,28 @@ WhatToEat/
 │   └── go.sum
 ```
 
-## Task 1: 初始化 Supabase 项目与数据库
+## Task 1: 数据库设计与 SQLite 初始化
 
-- 在 [supabase.com](https://supabase.com) 注册并创建免费项目
-- 获取项目 URL、Anon Key、Service Role Key 和数据库连接字符串
-- 开启 Supabase Auth（本项目已改为模拟账号模式：username + @whattoeat.com）
-- 在 SQL Editor 中创建以下表结构：
+- 使用 SQLite 作为本地数据库（文件路径：`database/whattoeat.db`，可通过 `DATABASE_PATH` 环境变量覆盖）
+- GORM 自动迁移创建以下表结构：
 
-```sql
--- 冰箱食材表（管理现有的食材）
-CREATE TABLE fridge_items (
-  id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  name VARCHAR(100) NOT NULL,
-  quantity VARCHAR(50),
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- 用户菜系偏好表（用于微调 LLM 推荐口味）
-CREATE TABLE user_preferences (
-  id SERIAL PRIMARY KEY,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  cuisine VARCHAR(50) NOT NULL,
-  weight INT DEFAULT 1,
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id, cuisine)
-);
-
--- 冰箱共享表（全家共用一个冰箱）
-CREATE TABLE shared_menus (
-  id SERIAL PRIMARY KEY,
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  shared_with_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(owner_id, shared_with_id)
-);
+```
+users: id, username, email, password_hash, created_at
+fridge_items: id, user_id, name, quantity, created_at
+user_preferences: id, user_id, cuisine, weight, created_at
+shared_menus: id, owner_id, shared_with_id, created_at
 ```
 
-- 配置 RLS (Row Level Security) 策略，确保用户只能访问自己的数据和被共享的菜单
+- 启用外键约束（`foreign_keys(1)`）和 busy_timeout（`5000ms`）防止并发锁表
+- 连接池设置：`MaxOpenConns=1` 避免 SQLite 并发写锁冲突
 
 ## Task 2: 搭建 Go 后端 (server/)
 
 1. 初始化 Go 模块：`go mod init whattoeat`
-2. 安装依赖：Gin、GORM、PostgreSQL 驱动、HTTP 客户端（调用 OpenRouter）
-3. 创建数据模型 (`models/`)：`FridgeItem`、`UserPreference`、`SharedMenu`
-4. 创建数据库连接 (`database/db.go`)：连接 Supabase PostgreSQL
-5. 创建 JWT 认证中间件 (`middleware/auth.go`)：验证 Supabase 签发的 JWT Token
+2. 安装依赖：Gin、GORM、SQLite 驱动、HTTP 客户端（调用 Gemini API）
+3. 创建数据模型 (`models/`)：`User`、`FridgeItem`、`UserPreference`、`SharedMenu`
+4. 创建数据库连接 (`database/db.go`)：连接本地 SQLite，自动迁移建表
+5. 创建 JWT 认证中间件 (`middleware/auth.go`)：使用 Legacy JWT Secret 验证自签 JWT Token
 6. 实现 API 路由：
 
 **认证相关（无需 Token）：**
@@ -102,7 +78,7 @@ CREATE TABLE shared_menus (
 **推荐与偏好（需 Token）：**
 | 方法 | 路径 | 功能 |
 |------|------|------|
-| GET | /api/recommend | 调用 OpenRouter API，根据冰箱食材推荐菜谱 |
+| GET | /api/recommend | 调用 Gemini API，根据冰箱食材和偏好推荐菜谱 |
 | GET | /api/preferences | 获取用户偏好 |
 | POST | /api/preferences | 设置菜系偏好 |
 
@@ -116,17 +92,17 @@ CREATE TABLE shared_menus (
 7. LLM 推荐逻辑：
    - 从数据库获取用户的 `fridge_items` 列表。
    - 获取用户的 `user_preferences`。
-   - 构造 Prompt：“我有这些食材：[食材列表]，我喜欢[偏好]口味，请推荐3道菜并给出简易做法。”
-   - 通过 **OpenRouter** 调用免费模型（如 `google/gemini-pro-1.5-exp-free-v1:free` 或 `meta-llama/llama-3.1-8b-instruct:free`）。
-   - 解析流式或普通返回的 JSON 结果。
+   - 构造 Prompt："我有这些食材：[食材列表]，我喜欢[偏好]口味，请推荐3道菜并给出简易做法。"
+   - 通过 **Gemini API** 调用 `gemini-2.0-flash` 模型，强制 JSON 输出（配置 `responseSchema`）。
+   - 解析 JSON 结果返回给前端。
 
 ## Task 3: 搭建 React Native 前端 (mobile/)
 
 1. 使用 `npx create-expo-app` 初始化项目
-2. 安装依赖：React Navigation、NativeWind v4、`@supabase/supabase-js`、axios
+2. 安装依赖：React Navigation、NativeWind v4、axios
 3. 配置 NativeWind：
    - 适配 Web 和移动端，配置 `global.css`。
-4. 配置 Supabase 客户端 (`services/supabase.js`)：用于前端认证
+4. 封装 API 服务 (`services/api.js`)
 5. 实现 AuthContext (`contexts/AuthContext.js`)：支持账号名自动补全后缀。
 6. 实现页面：
    - **LoginScreen / RegisterScreen** - 登录注册页
@@ -164,24 +140,28 @@ CREATE TABLE shared_menus (
 
 ## Task 6: 部署后端到云平台
 
-推荐使用 **Render**（免费套餐）或 **Railway**（每月 $5 免费额度）：
+推荐使用 **VPS + GitHub Actions** 自部署（当前方案）：
 
-**Render 部署步骤：**
+**部署流程：**
 
-1. 将代码推送到 GitHub 仓库
-2. 在 [render.com](https://render.com) 注册并连接 GitHub
-3. 创建 Web Service，选择 `server/` 目录
-4. 配置环境变量：`DATABASE_URL`（Supabase 连接字符串）、`SUPABASE_URL`、`SUPABASE_KEY`
-5. Render 自动检测 Go 项目并构建部署
+1. 代码推送到 GitHub `main` 分支
+2. GitHub Actions 自动构建 Go 二进制（`GOOS=linux GOARCH=amd64`）
+3. 通过 SSH 将二进制文件部署到 VPS `/var/www/whattoeat/`
+4. 重启 systemd 服务 `whattoeat`
 
-**Railway 部署步骤：**
+**VPS 环境要求：**
 
-1. 在 [railway.app](https://railway.app) 注册并连接 GitHub
-2. 新建项目 -> Deploy from GitHub repo
-3. 添加环境变量（同上）
-4. 自动部署，获得公网 URL
+- Linux 系统（amd64 架构）
+- 配置 systemd 服务单元 `/etc/systemd/system/whattoeat.service`
+- 环境变量：`GEMINI_API_KEY`、`JWT_SECRET`（Legacy JWT Secret）、`LLM_MODEL`
+
+**数据备份（Cloudflare R2）：**
+
+- 源码在 GitHub，无需备份
+- 只需备份：`whattoeat.db`（SQLite 数据库文件）+ `.env` 配置 + systemd service 文件
+- 使用 rclone 定期同步到 R2 存储桶（WNAM 美西区域）
 
 **部署后：**
 
-- 将前端 `services/api.js` 中的 API 地址更新为部署后的公网 URL
+- 将前端 `services/api.js` 中的 API 地址更新为 VPS 公网域名
 - 重新打包 APK（Task 5）
