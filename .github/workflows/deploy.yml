@@ -24,7 +24,7 @@ jobs:
       - name: Build binary
         run: |
           cd server
-          GOOS=linux GOARCH=amd64 go build -o whattoeat-server main.go
+          GOOS=linux GOARCH=arm64 go build -o whattoeat-server main.go
 
       - name: Prepare VPS for new binary
         uses: appleboy/ssh-action@v1.0.3
