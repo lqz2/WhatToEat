@@ -73,7 +73,7 @@ export default function CustomMenuScreen() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [ingredients, setIngredients] = useState("");
-  const [selectedTag, setSelectedTag] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchDishes = async () => {
@@ -96,7 +96,7 @@ export default function CustomMenuScreen() {
   const resetForm = () => {
     setName("");
     setIngredients("");
-    setSelectedTag("");
+    setSelectedTags([]);
     setShowForm(false);
   };
 
@@ -112,11 +112,12 @@ export default function CustomMenuScreen() {
 
     setSubmitting(true);
     const previousDishes = [...dishes];
+    const tagsString = selectedTags.join(",");
     const tempDish = {
       id: Date.now(),
       name: name.trim(),
       ingredients: ingredients.trim(),
-      tag: selectedTag,
+      tag: tagsString,
       created_at: new Date().toISOString(),
     };
     setDishes((prev) => [tempDish, ...prev]);
@@ -124,6 +125,8 @@ export default function CustomMenuScreen() {
 
     try {
       await customDishAPI.addDish(tempDish.name, tempDish.ingredients, tempDish.tag);
+      // 添加成功后重新拉取列表，获取服务端真实 ID（确保后续删除可用）
+      await fetchDishes();
     } catch (error) {
       Alert.alert("错误", "添加菜品失败，请检查网络");
       setDishes(previousDishes);
@@ -214,17 +217,19 @@ export default function CustomMenuScreen() {
             />
 
             {/* 口味标签 */}
-            <Text className="text-sm font-medium text-gray-500 mb-2">口味标签（可选）</Text>
+            <Text className="text-sm font-medium text-gray-500 mb-2">口味标签（可选，可多选）</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-              <View className="flex-row">
+              <View className="flex-row flex-wrap">
                 {TAG_OPTIONS.map((tag) => {
-                  const isSelected = selectedTag === tag;
+                  const isSelected = selectedTags.includes(tag);
                   const theme = getTagTheme(TAG_OPTIONS.indexOf(tag));
                   return (
                     <TouchableOpacity
                       key={tag}
-                      onPress={() => setSelectedTag(isSelected ? "" : tag)}
-                      className={`px-3 py-1.5 rounded-full mr-2 border ${
+                      onPress={() =>
+                        setSelectedTags((prev) => (isSelected ? prev.filter((t) => t !== tag) : [...prev, tag]))
+                      }
+                      className={`px-3 py-1.5 rounded-full mr-2 mb-2 border ${
                         isSelected ? `${theme.bg} ${theme.border}` : "bg-gray-50 border-gray-200"
                       }`}
                     >
@@ -253,8 +258,8 @@ export default function CustomMenuScreen() {
           {dishes.length > 0 ? (
             dishes.map((dish, index) => {
               const card = getCardTheme(index);
-              const tagIndex = TAG_OPTIONS.indexOf(dish.tag);
-              const tagTheme = tagIndex !== -1 ? getTagTheme(tagIndex) : null;
+              // tag 可能是逗号分隔字符串，拆分为数组
+              const tags = dish.tag ? dish.tag.split(",").filter(Boolean) : [];
               return (
                 <View key={dish.id} className={`bg-white rounded-2xl p-4 mb-3 border ${card.border} shadow-sm`}>
                   <View className="flex-row items-start">
@@ -273,17 +278,24 @@ export default function CustomMenuScreen() {
 
                       <Text className="text-gray-500 text-sm mt-1">🥬 {dish.ingredients}</Text>
 
-                      {dish.tag && (
-                        <View className="flex-row mt-2">
-                          <View
-                            className={`px-2 py-0.5 rounded-full border ${
-                              tagTheme ? `${tagTheme.bg} ${tagTheme.border}` : "bg-gray-100 border-gray-200"
-                            }`}
-                          >
-                            <Text className={`text-xs font-medium ${tagTheme ? tagTheme.text : "text-gray-500"}`}>
-                              {dish.tag}
-                            </Text>
-                          </View>
+                      {tags.length > 0 && (
+                        <View className="flex-row flex-wrap mt-2">
+                          {tags.map((t) => {
+                            const tagIndex = TAG_OPTIONS.indexOf(t);
+                            const tagTheme = tagIndex !== -1 ? getTagTheme(tagIndex) : null;
+                            return (
+                              <View
+                                key={t}
+                                className={`px-2 py-0.5 rounded-full border mr-1.5 mb-1 ${
+                                  tagTheme ? `${tagTheme.bg} ${tagTheme.border}` : "bg-gray-100 border-gray-200"
+                                }`}
+                              >
+                                <Text className={`text-xs font-medium ${tagTheme ? tagTheme.text : "text-gray-500"}`}>
+                                  {t}
+                                </Text>
+                              </View>
+                            );
+                          })}
                         </View>
                       )}
                     </View>

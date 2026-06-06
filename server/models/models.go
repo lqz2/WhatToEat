@@ -59,7 +59,7 @@ type CustomDish struct {
 	UserID      string    `json:"user_id" gorm:"type:text;not null"`
 	Name        string    `json:"name" gorm:"size:100;not null"`
 	Ingredients string    `json:"ingredients" gorm:"size:500;not null"`
-	Tag         string    `json:"tag" gorm:"size:50"`
+	Tag         string    `json:"tag" gorm:"size:200"`
 	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
 }
 
