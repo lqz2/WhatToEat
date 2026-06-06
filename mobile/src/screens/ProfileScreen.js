@@ -18,6 +18,12 @@ export default function ProfileScreen({ navigation }) {
       icon: "🎯",
       onPress: () => navigation.navigate("Preferences"),
     },
+    {
+      title: "我的菜单",
+      subtitle: "记录你的私房拿手菜",
+      icon: "❤️",
+      onPress: () => navigation.navigate("CustomMenu"),
+    },
   ];
 
   return (

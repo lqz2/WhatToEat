@@ -11,6 +11,7 @@ import ShareScreen from "../screens/ShareScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
+import CustomMenuScreen from "../screens/CustomMenuScreen";
 import { useAuth } from "../contexts/AuthContext";
 
 const Tab = createBottomTabNavigator();
@@ -75,6 +76,7 @@ function ProfileStack() {
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Share" component={ShareScreen} options={{ title: "冰箱共享" }} />
       <Stack.Screen name="Preferences" component={PreferenceScreen} options={{ title: "口味偏好" }} />
+      <Stack.Screen name="CustomMenu" component={CustomMenuScreen} options={{ title: "我的菜单" }} />
     </Stack.Navigator>
   );
 }

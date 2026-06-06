@@ -56,6 +56,7 @@ func Init() {
 		&models.FridgeItem{},
 		&models.UserPreference{},
 		&models.SharedMenu{},
+		&models.CustomDish{},
 	)
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)

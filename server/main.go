@@ -64,6 +64,11 @@ func main() {
 			protected.POST("/share", handlers.ShareMenu)
 			protected.DELETE("/share/:id", handlers.CancelShare)
 			protected.GET("/shared", handlers.GetSharedList)
+
+			// 我的菜单
+			protected.GET("/custom-dishes", handlers.GetCustomDishes)
+			protected.POST("/custom-dishes", handlers.AddCustomDish)
+			protected.DELETE("/custom-dishes/:id", handlers.DeleteCustomDish)
 		}
 	}
 
@@ -83,6 +88,3 @@ func main() {
 		log.Fatalf("服务启动失败: %v", err)
 	}
 }
-
-
-

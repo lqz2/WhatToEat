@@ -53,6 +53,20 @@ func (SharedMenu) TableName() string {
 	return "shared_menus"
 }
 
+// CustomDish 用户自定义菜品模型
+type CustomDish struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	UserID      string    `json:"user_id" gorm:"type:text;not null"`
+	Name        string    `json:"name" gorm:"size:100;not null"`
+	Ingredients string    `json:"ingredients" gorm:"size:500;not null"`
+	Tag         string    `json:"tag" gorm:"size:50"`
+	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
+}
+
+func (CustomDish) TableName() string {
+	return "custom_dishes"
+}
+
 // CreatePreferenceRequest 创建偏好请求
 type CreatePreferenceRequest struct {
 	Cuisine string `json:"cuisine" binding:"required"`
@@ -67,6 +81,13 @@ type ShareRequest struct {
 type AuthRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=6"`
+}
+
+// CreateCustomDishRequest 创建自定义菜品请求
+type CreateCustomDishRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Ingredients string `json:"ingredients" binding:"required"`
+	Tag         string `json:"tag"`
 }
 
 // AuthResponse 认证响应

@@ -65,4 +65,11 @@ export const shareAPI = {
   getSharedList: () => api.get("/shared"),
 };
 
+// ========== 我的菜单 API ==========
+export const customDishAPI = {
+  getDishes: () => api.get("/custom-dishes"),
+  addDish: (name, ingredients, tag = "") => api.post("/custom-dishes", { name, ingredients, tag }),
+  deleteDish: (id) => api.delete(`/custom-dishes/${id}`),
+};
+
 export default api;
