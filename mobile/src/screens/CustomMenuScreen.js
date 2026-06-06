@@ -135,24 +135,38 @@ export default function CustomMenuScreen() {
     }
   };
 
-  const handleDeleteDish = (id, dishName) => {
-    Alert.alert("删除菜品", `确定要删除「${dishName}」吗？`, [
-      { text: "取消", style: "cancel" },
-      {
-        text: "删除",
-        style: "destructive",
-        onPress: async () => {
-          const previousDishes = [...dishes];
-          setDishes((prev) => prev.filter((d) => d.id !== id));
-          try {
-            await customDishAPI.deleteDish(id);
-          } catch (error) {
-            Alert.alert("错误", "删除失败，请检查网络");
-            setDishes(previousDishes);
-          }
-        },
-      },
-    ]);
+  const handleDeleteDish = async (id, dishName) => {
+    // Web 平台用 window.confirm，原生平台用 Alert.alert
+    let confirmed = false;
+    if (Platform.OS === "web") {
+      confirmed = window.confirm(`确定要删除「${dishName}」吗？`);
+    } else {
+      confirmed = await new Promise((resolve) => {
+        Alert.alert("删除菜品", `确定要删除「${dishName}」吗？`, [
+          { text: "取消", style: "cancel", onPress: () => resolve(false) },
+          { text: "删除", style: "destructive", onPress: () => resolve(true) },
+        ]);
+      });
+    }
+
+    if (!confirmed) return;
+
+    // 乐观更新：先从列表中移除
+    const previousDishes = [...dishes];
+    setDishes((prev) => prev.filter((d) => d.id !== id));
+
+    try {
+      await customDishAPI.deleteDish(id);
+    } catch (error) {
+      console.log("删除失败:", error.response?.status, error.response?.data || error.message);
+      // 失败回滚
+      setDishes(previousDishes);
+      if (Platform.OS === "web") {
+        window.alert(`删除失败: ${error.response?.data?.error || error.message}`);
+      } else {
+        Alert.alert("错误", "删除失败，请检查网络");
+      }
+    }
   };
 
   return (
